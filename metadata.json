@@ -1,0 +1,6 @@
+{
+  "name": "المصحف الرقمي",
+  "description": "تطبيق المصحف الرقمي مع تفسير الجلالين والتفسير الميسر، إعدادات قراءة مخصصة، بحث متقدم وعلامات مرجعية",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

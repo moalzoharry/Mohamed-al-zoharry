@@ -1,0 +1,9 @@
+<resources>
+    <string name="app_name">المصحف الرقمي</string>
+    <string name="title_mushaf">المصحف الشريف</string>
+    <string name="title_tafsir_jalalayn">تفسير الجلالين</string>
+    <string name="title_tafsir_muyassar">التفسير الميسر</string>
+    <string name="title_search">البحث في القرآن والتفسير</string>
+    <string name="title_bookmarks">العلامات المرجعية</string>
+    <string name="title_settings">إعدادات القراءة</string>
+</resources>
