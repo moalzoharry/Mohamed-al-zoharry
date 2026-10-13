@@ -22,10 +22,12 @@ import com.example.data.model.TafsirSource
 import com.example.data.model.WirdGoalType
 import com.example.data.remote.QuranApiClient
 import com.example.reminder.DailyWirdScheduler
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 enum class SearchFilter(val titleArabic: String) {
@@ -61,9 +63,42 @@ class QuranRepository(private val context: Context) {
     val dailyWirdFlow = _dailyWirdFlow.asStateFlow()
 
     init {
-        // Pre-populate Surah 1 (Al-Fatihah) from embedded data
-        QuranEmbeddedTafsirData.embeddedSurahsMap[1]?.let {
+        // Pre-populate Surah 1 (Al-Fatihah)
+        loadSurahFromAssets(1)?.let {
             surahCache[1] = it
+        }
+
+        // Asynchronously ensure full Quran (6,236 verses) is indexed in Room database for instant search
+        kotlinx.coroutines.CoroutineScope(Dispatchers.IO).launch {
+            ensureDatabasePopulated()
+        }
+    }
+
+    /**
+     * Checks if the local database has all 6,236 authentic ayahs.
+     * If incomplete or if placeholder records from an earlier build exist,
+     * populates/updates Room from the bundled assets.
+     */
+    suspend fun ensureDatabasePopulated() = withContext(Dispatchers.IO) {
+        try {
+            val totalCount = quranAyahDao.getTotalAyahsCount()
+            val sampleAyah = quranAyahDao.getAyahSync(2, 3)
+            val needsPopulation = totalCount < 6236 || sampleAyah == null || sampleAyah.textWithTashkeel.startsWith("﴿سورة")
+
+            if (needsPopulation) {
+                val allEntities = mutableListOf<QuranAyahEntity>()
+                for (sNum in 1..114) {
+                    val ayahs = loadSurahFromAssets(sNum) ?: continue
+                    allEntities.addAll(ayahs.map { QuranAyahEntity.fromAyah(it) })
+                }
+                if (allEntities.size >= 6236) {
+                    allEntities.chunked(300).forEach { chunk ->
+                        quranAyahDao.insertAyahs(chunk)
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
         }
     }
 
@@ -249,21 +284,21 @@ class QuranRepository(private val context: Context) {
             return@withContext cached
         }
 
-        // 2. Check Room Database
-        val roomEntities = quranAyahDao.getAyahsForSurahSync(surahNumber)
-        if (roomEntities.isNotEmpty() && roomEntities.size >= expectedCount) {
-            val ayahs = roomEntities.map { it.toAyah() }
-            surahCache[surahNumber] = ayahs
-            return@withContext ayahs
-        }
-
-        // 3. Load from pre-bundled authentic assets (100% complete offline Quran & Tafsirs)
+        // 2. Load from pre-bundled authentic assets (100% complete offline Quran & Tafsirs)
         val assetAyahs = loadSurahFromAssets(surahNumber)
         if (!assetAyahs.isNullOrEmpty() && assetAyahs.size >= expectedCount) {
             val entities = assetAyahs.map { QuranAyahEntity.fromAyah(it) }
             quranAyahDao.insertAyahs(entities)
             surahCache[surahNumber] = assetAyahs
             return@withContext assetAyahs
+        }
+
+        // 3. Check Room Database (only if verified authentic and complete)
+        val roomEntities = quranAyahDao.getAyahsForSurahSync(surahNumber)
+        if (roomEntities.isNotEmpty() && roomEntities.size >= expectedCount && !roomEntities.first().textWithTashkeel.startsWith("﴿سورة")) {
+            val ayahs = roomEntities.map { it.toAyah() }
+            surahCache[surahNumber] = ayahs
+            return@withContext ayahs
         }
 
         // 4. Attempt remote load and persist to Room
@@ -275,31 +310,14 @@ class QuranRepository(private val context: Context) {
             return@withContext remoteAyahs
         }
 
-        // 5. If Room has any existing verses
-        if (roomEntities.isNotEmpty()) {
+        // 5. If Room has authentic verses
+        if (roomEntities.isNotEmpty() && !roomEntities.first().textWithTashkeel.startsWith("﴿سورة")) {
             val ayahs = roomEntities.map { it.toAyah() }
             surahCache[surahNumber] = ayahs
             return@withContext ayahs
         }
 
-        // 6. Fallback generator for unexpected edge case
-        val fallbackAyahs = mutableListOf<Ayah>()
-        for (i in 1..expectedCount) {
-            val basmalah = if (i == 1 && surahNumber != 1 && surahNumber != 9) "بِسْمِ اللَّهِ الرَّحْمَٰنِ الرَّحِيمِ " else ""
-            fallbackAyahs.add(
-                Ayah(
-                    surahNumber = surahNumber,
-                    ayahNumber = i,
-                    textWithTashkeel = "$basmalah﴿سورة ${surahInfo?.nameArabic} - آية $i﴾",
-                    textClean = QuranStaticData.normalizeArabic("سورة ${surahInfo?.nameArabic} آية $i"),
-                    tafsirJalalayn = "تفسير الجلالين للآية $i من سورة ${surahInfo?.nameArabic}.",
-                    tafsirMuyassar = "التفسير الميسر للآية $i من سورة ${surahInfo?.nameArabic}."
-                )
-            )
-        }
-        quranAyahDao.insertAyahs(fallbackAyahs.map { QuranAyahEntity.fromAyah(it) })
-        surahCache[surahNumber] = fallbackAyahs
-        return@withContext fallbackAyahs
+        return@withContext emptyList()
     }
 
     /**
@@ -309,13 +327,18 @@ class QuranRepository(private val context: Context) {
         val trimmed = query.trim()
         if (trimmed.length < 2) return@withContext emptyList()
 
+        // Ensure database has all 6,236 verses indexed for comprehensive search across all 114 surahs
+        if (quranAyahDao.getTotalAyahsCount() < 6236) {
+            ensureDatabasePopulated()
+        }
+
         val normalizedQuery = QuranStaticData.normalizeArabic(trimmed)
 
-        // 1. Query Room Database directly
+        // 1. Query Room Database directly using diacritic-free normalized text
         val roomResults = when (filter) {
             SearchFilter.QURAN_ONLY -> quranAyahDao.searchQuran(normalizedQuery)
-            SearchFilter.JALALAYN_ONLY -> quranAyahDao.searchJalalayn(trimmed)
-            SearchFilter.MUYASSAR_ONLY -> quranAyahDao.searchMuyassar(trimmed)
+            SearchFilter.JALALAYN_ONLY -> quranAyahDao.searchJalalayn(normalizedQuery)
+            SearchFilter.MUYASSAR_ONLY -> quranAyahDao.searchMuyassar(normalizedQuery)
             SearchFilter.ALL -> quranAyahDao.searchAll(normalizedQuery)
         }
 
@@ -326,9 +349,9 @@ class QuranRepository(private val context: Context) {
             val key = Pair(entity.surahNumber, entity.ayahNumber)
 
             val matchType = when {
-                QuranStaticData.normalizeArabic(entity.textClean).contains(normalizedQuery, ignoreCase = true) ||
+                entity.textClean.contains(normalizedQuery, ignoreCase = true) ||
                 QuranStaticData.normalizeArabic(entity.textWithTashkeel).contains(normalizedQuery, ignoreCase = true) -> MatchType.QURAN
-                entity.tafsirJalalayn.contains(trimmed, ignoreCase = true) ||
+                entity.tafsirJalalaynClean.contains(normalizedQuery, ignoreCase = true) ||
                 QuranStaticData.normalizeArabic(entity.tafsirJalalayn).contains(normalizedQuery, ignoreCase = true) -> MatchType.JALALAYN
                 else -> MatchType.MUYASSAR
             }

@@ -46,20 +46,20 @@ interface QuranAyahDao {
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun insertAyah(ayah: QuranAyahEntity)
 
-    // Fast indexed search in Quranic text
+    // Fast indexed search in Quranic text (searches both normalized and raw text)
     @Query("SELECT * FROM quran_ayahs WHERE textClean LIKE '%' || :query || '%' OR textWithTashkeel LIKE '%' || :query || '%' ORDER BY surahNumber ASC, ayahNumber ASC LIMIT 100")
     suspend fun searchQuran(query: String): List<QuranAyahEntity>
 
-    // Search in Tafsir Al-Jalalayn
-    @Query("SELECT * FROM quran_ayahs WHERE tafsirJalalayn LIKE '%' || :query || '%' ORDER BY surahNumber ASC, ayahNumber ASC LIMIT 100")
+    // Search in Tafsir Al-Jalalayn without tashkeel
+    @Query("SELECT * FROM quran_ayahs WHERE tafsirJalalaynClean LIKE '%' || :query || '%' OR tafsirJalalayn LIKE '%' || :query || '%' ORDER BY surahNumber ASC, ayahNumber ASC LIMIT 100")
     suspend fun searchJalalayn(query: String): List<QuranAyahEntity>
 
-    // Search in Tafsir Al-Muyassar
-    @Query("SELECT * FROM quran_ayahs WHERE tafsirMuyassar LIKE '%' || :query || '%' ORDER BY surahNumber ASC, ayahNumber ASC LIMIT 100")
+    // Search in Tafsir Al-Muyassar without tashkeel
+    @Query("SELECT * FROM quran_ayahs WHERE tafsirMuyassarClean LIKE '%' || :query || '%' OR tafsirMuyassar LIKE '%' || :query || '%' ORDER BY surahNumber ASC, ayahNumber ASC LIMIT 100")
     suspend fun searchMuyassar(query: String): List<QuranAyahEntity>
 
-    // Comprehensive search across Quran text and both Tafsirs
-    @Query("SELECT * FROM quran_ayahs WHERE textClean LIKE '%' || :query || '%' OR textWithTashkeel LIKE '%' || :query || '%' OR tafsirJalalayn LIKE '%' || :query || '%' OR tafsirMuyassar LIKE '%' || :query || '%' ORDER BY surahNumber ASC, ayahNumber ASC LIMIT 150")
+    // Comprehensive search across Quran text and both Tafsirs without tashkeel
+    @Query("SELECT * FROM quran_ayahs WHERE textClean LIKE '%' || :query || '%' OR tafsirJalalaynClean LIKE '%' || :query || '%' OR tafsirMuyassarClean LIKE '%' || :query || '%' OR textWithTashkeel LIKE '%' || :query || '%' OR tafsirJalalayn LIKE '%' || :query || '%' OR tafsirMuyassar LIKE '%' || :query || '%' ORDER BY surahNumber ASC, ayahNumber ASC LIMIT 150")
     suspend fun searchAll(query: String): List<QuranAyahEntity>
 
     @Query("DELETE FROM quran_ayahs WHERE surahNumber = :surahNumber")

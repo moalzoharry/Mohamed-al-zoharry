@@ -28,6 +28,8 @@ data class QuranAyahEntity(
     val textClean: String,
     val tafsirJalalayn: String,
     val tafsirMuyassar: String,
+    val tafsirJalalaynClean: String = "",
+    val tafsirMuyassarClean: String = "",
     val juzNumber: Int = 1,
     val pageNumber: Int = 1,
     val updatedAt: Long = System.currentTimeMillis()
@@ -56,6 +58,8 @@ data class QuranAyahEntity(
             textClean = ayah.textClean,
             tafsirJalalayn = ayah.tafsirJalalayn,
             tafsirMuyassar = ayah.tafsirMuyassar,
+            tafsirJalalaynClean = com.example.data.repository.QuranStaticData.normalizeArabic(ayah.tafsirJalalayn),
+            tafsirMuyassarClean = com.example.data.repository.QuranStaticData.normalizeArabic(ayah.tafsirMuyassar),
             juzNumber = ayah.juzNumber,
             pageNumber = ayah.pageNumber
         )

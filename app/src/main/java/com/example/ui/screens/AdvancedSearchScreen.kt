@@ -79,7 +79,11 @@ fun AdvancedSearchScreen(
     val results by viewModel.searchResults.collectAsState()
     val isSearching by viewModel.isSearching.collectAsState()
 
-    val popularKeywords = listOf("الرحمة", "الصبر", "الجنة", "الصلاة", "الهدى", "التقوى", "النور", "التوبة", "المغفرة")
+    val popularKeywords = listOf(
+        "الصراط", "الرحمن", "الذين امنوا", "الصلاة", "كتب عليكم الصيام",
+        "الله نور السماوات", "لا اله الا هو", "ابراهيم", "يوسف", "موسى",
+        "الجنة", "الكوثر", "الرحمة", "الصبر"
+    )
 
     Scaffold(
         topBar = {
@@ -121,7 +125,7 @@ fun AdvancedSearchScreen(
                 onValueChange = { viewModel.onSearchQueryChanged(it) },
                 placeholder = {
                     Text(
-                        text = "ابحث عن كلمة أو عبارة في القرآن أو التفسير...",
+                        text = "ابحث بدون تشكيل (مثال: الصراط، الرحمن، امنوا)...",
                         fontFamily = TajawalFontFamily,
                         fontSize = 14.sp
                     )
@@ -151,6 +155,34 @@ fun AdvancedSearchScreen(
                     .padding(horizontal = 16.dp, vertical = 8.dp)
                     .testTag("search_input_field")
             )
+
+            // Intelligent search indicator banner
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 2.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    shape = RoundedCornerShape(8.dp),
+                    color = IslamicGreen.copy(alpha = 0.1f)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "✓ البحث الذكي: يبحث تلقائياً بدون تشكيل وبكافة صور الهمزات (أ، إ، آ / ة، ه / ي، ى)",
+                            fontFamily = TajawalFontFamily,
+                            fontSize = 11.sp,
+                            color = IslamicGreen,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(4.dp))
 
             // 2. Filter Chips: All / Quran / Jalalayn / Muyassar
             Row(
@@ -414,6 +446,7 @@ fun SearchResultItemCard(
 
 /**
  * Builds an AnnotatedString highlighting the query term with a warm amber background and bold weight.
+ * Seamlessly matches and highlights even when user searches without Tashkeel!
  */
 fun buildHighlightedString(fullText: String, query: String) = buildAnnotatedString {
     val normalizedFull = QuranStaticData.normalizeArabic(fullText)
@@ -424,35 +457,59 @@ fun buildHighlightedString(fullText: String, query: String) = buildAnnotatedStri
         return@buildAnnotatedString
     }
 
-    var startIndex = 0
-    while (startIndex < fullText.length) {
-        // Find match in normalized space
-        val currentSub = QuranStaticData.normalizeArabic(fullText.substring(startIndex))
-        val matchInSub = currentSub.indexOf(normalizedQuery)
-
-        if (matchInSub == -1) {
-            append(fullText.substring(startIndex))
-            break
-        }
-
-        // Approximate index in original text
-        val matchIndex = fullText.indexOf(query, startIndex, ignoreCase = true)
-        if (matchIndex != -1) {
-            append(fullText.substring(startIndex, matchIndex))
-            pushStyle(
-                SpanStyle(
-                    background = QuranGold.copy(alpha = 0.35f),
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFFB45309)
-                )
+    // 1. Direct exact or case-insensitive match
+    val directIndex = fullText.indexOf(query, ignoreCase = true)
+    if (directIndex != -1) {
+        append(fullText.substring(0, directIndex))
+        pushStyle(
+            SpanStyle(
+                background = QuranGold.copy(alpha = 0.35f),
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFB45309)
             )
-            append(fullText.substring(matchIndex, matchIndex + query.length))
-            pop()
-            startIndex = matchIndex + query.length
-        } else {
-            // Fallback
-            append(fullText.substring(startIndex))
-            break
+        )
+        append(fullText.substring(directIndex, directIndex + query.length))
+        pop()
+        append(fullText.substring(directIndex + query.length))
+        return@buildAnnotatedString
+    }
+
+    // 2. Token-level matching across diacritics
+    val words = fullText.split(" ")
+    val queryTokens = normalizedQuery.split(" ").filter { it.isNotBlank() }
+    val qLen = queryTokens.size.coerceAtLeast(1)
+
+    var matchStart = -1
+    var matchEnd = -1
+
+    if (words.size >= qLen) {
+        for (i in 0..(words.size - qLen)) {
+            val window = words.subList(i, i + qLen).joinToString(" ")
+            val normWindow = QuranStaticData.normalizeArabic(window)
+            if (normWindow.contains(normalizedQuery)) {
+                val start = fullText.indexOf(window)
+                if (start != -1) {
+                    matchStart = start
+                    matchEnd = start + window.length
+                    break
+                }
+            }
         }
+    }
+
+    if (matchStart != -1 && matchEnd <= fullText.length) {
+        append(fullText.substring(0, matchStart))
+        pushStyle(
+            SpanStyle(
+                background = QuranGold.copy(alpha = 0.35f),
+                fontWeight = FontWeight.Bold,
+                color = Color(0xFFB45309)
+            )
+        )
+        append(fullText.substring(matchStart, matchEnd))
+        pop()
+        append(fullText.substring(matchEnd))
+    } else {
+        append(fullText)
     }
 }

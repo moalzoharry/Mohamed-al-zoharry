@@ -6,16 +6,62 @@ import com.example.data.model.SurahInfo
 
 object QuranStaticData {
 
+    /**
+     * Comprehensive Arabic normalization for fast, flexible search without Tashkeel (diacritics).
+     * Intelligently aligns Uthmani Quranic script and modern search queries:
+     * - Strips all Harakat (Fathah, Dammah, Kasrah, Sukoon, Shaddah, Tanween, etc.)
+     * - Adapts Uthmani spellings (e.g. الصلوة -> الصلاة, الزكوة -> الزكاة, الحيوة -> الحياة)
+     * - Normalizes dagger alef (الرحمن, ذلك, هذا, هذه, هؤلاء, لكن, أولئك, الصراط, إبراهيم, إسماعيل, السماوات)
+     * - Normalizes all Alef forms (أ, إ, آ, ٱ, ءا -> ا)
+     * - Normalizes interchangeable letters (ة / ه, ى / ي, ؤ / و, ئ / ي)
+     */
     fun normalizeArabic(text: String): String {
-        return text
-            .replace(Regex("[\u064B-\u065F\u0670\u06D6-\u06ED]"), "") // remove tashkeel/diacritics
-            .replace(Regex("[إأآٱ]"), "ا")
-            .replace("ى", "ي")
-            .replace("ة", "ه")
-            .replace("ؤ", "و")
-            .replace("ئ", "ي")
-            .replace("ـ", "") // tatweel
-            .trim()
+        if (text.isBlank()) return ""
+        var t = text
+
+        // 1. Quranic Uthmani specific spelling adaptations:
+        // 'صلوة', 'زكوة', 'حيوة' -> صلاة, زكاة, حياة
+        t = t.replace(Regex("و[\\u0670]?ة"), "اة")
+
+        // Words with dagger alef written without alef in standard modern Arabic:
+        t = t.replace(Regex("رَّ?حْمَ?[\\u0670]ن"), "رحمن")
+        t = t.replace(Regex("إِلَ?[\\u0670]ه"), "اله")
+        t = t.replace(Regex("ذَ?[\\u0670]لِ?ك"), "ذلك")
+        t = t.replace(Regex("هَ?[\\u0670]ذَا"), "هذا")
+        t = t.replace(Regex("هَ?[\\u0670]ذِ"), "هذ")
+        t = t.replace(Regex("هَ?[\\u0670]ؤُ"), "هؤ")
+        t = t.replace(Regex("لَ?[\\u0670]كِ?ن"), "لكن")
+        t = t.replace(Regex("أُ?و?لَ?[\\u0670]"), "اول")
+
+        // 2. Dagger alef (\u0670) in all other words represents long vowel alef (الصراط, ابراهيم, اسماعيل, سماوات, عالمين)
+        t = t.replace('\u0670', 'ا')
+        t = t.replace('\u06E6', 'ي') // Uthmani small ya
+        t = t.replace('\u06E5', 'و') // Uthmani small waw
+
+        // 3. Remove all Tashkeel, diacritics, Quranic stop marks, pause signs, and ornamentations
+        t = t.replace(Regex("[\\u064B-\\u065F\\u06D6-\\u06ED\\u0610-\\u061A\\u08F0-\\u08FE\\u06DF-\\u06E4\\u06E7-\\u06EE]"), "")
+
+        // 4. Tatweel / Kashida
+        t = t.replace("ـ", "")
+
+        // 5. Quranic hamza before alef (ءا -> ا)
+        t = t.replace("ءا", "ا")
+
+        // 6. Normalize all forms of Alef (أ, إ, آ, ٱ -> ا)
+        t = t.replace(Regex("[إأآٱ]"), "ا")
+
+        // 7. Normalize Ya and Alef Maqsura (ى -> ي)
+        t = t.replace('ى', 'ي')
+
+        // 8. Normalize Ta Marbuta and Ha (ة -> ه) for universal matching
+        t = t.replace('ة', 'ه')
+
+        // 9. Normalize Hamza on Waw and Ya
+        t = t.replace('ؤ', 'و')
+        t = t.replace('ئ', 'ي')
+
+        // 10. Trim and collapse whitespace
+        return t.replace(Regex("\\s+"), " ").trim()
     }
 
     val surahs: List<SurahInfo> = listOf(
