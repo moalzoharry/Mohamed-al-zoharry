@@ -20,6 +20,14 @@ import com.example.data.repository.QuranStaticData
 import com.example.data.repository.SearchFilter
 import com.example.reminder.DailyWirdScheduler
 import com.example.util.AutoNightModeSensorManager
+import com.example.prayer.AdhanAlertMode
+import com.example.prayer.AdhanMuezzin
+import com.example.prayer.AdhanPlayerState
+import com.example.prayer.CalculationMethod
+import com.example.prayer.CityPreset
+import com.example.prayer.PrayerSchedule
+import com.example.prayer.PrayerTimesRepository
+import com.example.prayer.PrayerType
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -34,10 +42,17 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     private val repository = QuranRepository(application)
     val audioPlayer = QuranAudioPlayer(application)
     val autoNightSensorManager = AutoNightModeSensorManager(application)
+    val prayerRepository = PrayerTimesRepository(application)
 
     val settings: StateFlow<ReadingSettings> = repository.settingsFlow
     val dailyWirdReminder: StateFlow<DailyWirdReminder> = repository.dailyWirdFlow
     val ambientLux: StateFlow<Float?> = autoNightSensorManager.ambientLux
+
+    val prayerSchedule: StateFlow<PrayerSchedule> = prayerRepository.scheduleFlow
+    val selectedCity: StateFlow<CityPreset> = prayerRepository.selectedCityFlow
+    val selectedCalculationMethod: StateFlow<CalculationMethod> = prayerRepository.selectedMethodFlow
+    val selectedMuezzin: StateFlow<AdhanMuezzin> = prayerRepository.selectedMuezzinFlow
+    val adhanPlayerState: StateFlow<AdhanPlayerState> = prayerRepository.adhanPlayer.state
 
     val allSurahs: List<SurahInfo> = QuranStaticData.surahs
 
@@ -319,9 +334,39 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         )
     }
 
+    // ================= PRAYER TIMES & ADHAN METHODS =================
+    fun selectCity(city: CityPreset) {
+        prayerRepository.setCity(city)
+    }
+
+    fun setCustomLocation(cityName: String, countryName: String, lat: Double, lng: Double) {
+        prayerRepository.setCoordinates(cityName, countryName, lat, lng)
+    }
+
+    fun selectCalculationMethod(method: CalculationMethod) {
+        prayerRepository.setCalculationMethod(method)
+    }
+
+    fun selectMuezzin(muezzin: AdhanMuezzin) {
+        prayerRepository.setSelectedMuezzin(muezzin)
+    }
+
+    fun togglePrayerAlert(prayer: PrayerType): AdhanAlertMode {
+        return prayerRepository.cycleAlertMode(prayer)
+    }
+
+    fun playMuezzinPreview(muezzin: AdhanMuezzin) {
+        prayerRepository.adhanPlayer.playMuezzin(muezzin)
+    }
+
+    fun stopAdhanPreview() {
+        prayerRepository.adhanPlayer.stop()
+    }
+
     override fun onCleared() {
         super.onCleared()
         autoNightSensorManager.stopListening()
         audioPlayer.release()
+        prayerRepository.adhanPlayer.release()
     }
 }

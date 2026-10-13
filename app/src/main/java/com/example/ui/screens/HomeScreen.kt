@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.AutoStories
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.DarkMode
 import androidx.compose.material.icons.filled.LightMode
+import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.NotificationsActive
 import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.PlayArrow
@@ -47,6 +48,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import com.example.ui.components.AudioBottomPlayer
 import com.example.ui.components.DailyWirdCard
 import com.example.ui.components.DailyWirdReminderSheet
+import com.example.ui.components.PrayerCountdownCard
 import com.example.ui.components.ReciterSelectionBottomSheet
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -81,6 +83,7 @@ fun HomeScreen(
     onNavigateToSearch: () -> Unit,
     onNavigateToBookmarks: () -> Unit,
     onNavigateToDuaaKhatm: () -> Unit,
+    onNavigateToPrayerTimes: () -> Unit,
     onOpenSettings: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -89,6 +92,7 @@ fun HomeScreen(
     val audioState by viewModel.audioPlayerState.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val wirdReminder by viewModel.dailyWirdReminder.collectAsState()
+    val prayerSchedule by viewModel.prayerSchedule.collectAsState()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var filterQuery by remember { mutableStateOf("") }
     var showReciterSheet by remember { mutableStateOf(false) }
@@ -188,6 +192,17 @@ fun HomeScreen(
                             imageVector = Icons.Default.Bookmark,
                             contentDescription = "العلامات المرجعية",
                             tint = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onNavigateToPrayerTimes,
+                        modifier = Modifier.testTag("home_prayer_times_icon_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Mosque,
+                            contentDescription = "مواقيت الصلاة والأذان",
+                            tint = QuranGold
                         )
                     }
 
@@ -364,6 +379,14 @@ fun HomeScreen(
                         }
                     }
                 }
+            }
+
+            // 0.5. LIVE PRAYER COUNTDOWN & ADHAN CARD
+            item {
+                PrayerCountdownCard(
+                    schedule = prayerSchedule,
+                    onClick = onNavigateToPrayerTimes
+                )
             }
 
             // 1. LAST READ BANNER / HERO

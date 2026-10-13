@@ -27,6 +27,7 @@ import com.example.ui.screens.BookmarksScreen
 import com.example.ui.screens.DuaaKhatmScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.SurahReaderScreen
+import com.example.ui.screens.PrayerTimesScreen
 import com.example.ui.theme.QuranAppTheme
 import com.example.ui.viewmodel.QuranViewModel
 
@@ -36,6 +37,7 @@ sealed interface QuranScreen {
     object Search : QuranScreen
     object Bookmarks : QuranScreen
     object DuaaKhatm : QuranScreen
+    object PrayerTimes : QuranScreen
 }
 
 class MainActivity : ComponentActivity() {
@@ -91,6 +93,9 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToDuaaKhatm = {
                                         screenStack = screenStack + QuranScreen.DuaaKhatm
                                     },
+                                    onNavigateToPrayerTimes = {
+                                        screenStack = screenStack + QuranScreen.PrayerTimes
+                                    },
                                     onOpenSettings = {
                                         showSettingsSheet = true
                                     }
@@ -136,6 +141,14 @@ class MainActivity : ComponentActivity() {
                             }
                             is QuranScreen.DuaaKhatm -> {
                                 DuaaKhatmScreen(
+                                    viewModel = viewModel,
+                                    onBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
+                            is QuranScreen.PrayerTimes -> {
+                                PrayerTimesScreen(
                                     viewModel = viewModel,
                                     onBack = {
                                         if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
