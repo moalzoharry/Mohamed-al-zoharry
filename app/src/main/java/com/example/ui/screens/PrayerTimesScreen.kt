@@ -5,6 +5,8 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.location.Geocoder
 import android.location.LocationManager
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -29,6 +31,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.DarkMode
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Mosque
 import androidx.compose.material.icons.filled.MyLocation
@@ -42,6 +46,9 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.VolumeUp
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material.icons.filled.WbTwilight
+import com.example.prayer.CustomMuezzin
+import com.example.ui.components.MuslimMunaUpcomingPrayerBar
+import com.example.ui.screens.AdhanLiveOverlayScreen
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -100,6 +107,8 @@ import java.util.Locale
 fun PrayerTimesScreen(
     viewModel: QuranViewModel,
     onBack: () -> Unit,
+    onNavigateToQibla: () -> Unit = {},
+    onNavigateToAdhkar: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BackHandler { onBack() }
@@ -109,6 +118,8 @@ fun PrayerTimesScreen(
     val selectedCity by viewModel.selectedCity.collectAsState()
     val selectedMethod by viewModel.selectedCalculationMethod.collectAsState()
     val selectedMuezzin by viewModel.selectedMuezzin.collectAsState()
+    val customMuezzin by viewModel.customMuezzin.collectAsState()
+    val activeAdhanOverlayPrayer by viewModel.activeAdhanOverlayPrayer.collectAsState()
     val adhanPlayerState by viewModel.adhanPlayerState.collectAsState()
 
     var showMuezzinSheet by remember { mutableStateOf(false) }
@@ -202,6 +213,22 @@ fun PrayerTimesScreen(
                 )
             }
 
+            // 1.5. MUSLIM MUNA UPCOMING PRAYER TICKER / BANNER
+            item {
+                MuslimMunaUpcomingPrayerBar(
+                    schedule = schedule,
+                    muezzinName = if (customMuezzin.isEnabled && customMuezzin.filePath.isNotEmpty()) customMuezzin.name else selectedMuezzin.nameArabic,
+                    onOpenLiveAdhan = { prayerType ->
+                        viewModel.openAdhanOverlay(prayerType)
+                    },
+                    onToggleAlertMode = { prayerType ->
+                        viewModel.togglePrayerAlert(prayerType)
+                    },
+                    onClickBar = {},
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 6.dp)
+                )
+            }
+
             // 2. ACTIVE MUEZZIN BANNER CARD
             item {
                 AdhanMuezzinBannerCard(
@@ -214,6 +241,68 @@ fun PrayerTimesScreen(
                     },
                     onChangeMuezzin = { showMuezzinSheet = true }
                 )
+            }
+
+            // 2.5. QUICK ACTIONS: QIBLA COMPASS & AFTER-PRAYER ADHKAR
+            item {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = CardDefaults.outlinedCardBorder(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(onClick = onNavigateToQibla)
+                            .testTag("prayer_times_to_qibla_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(text = "🕋", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "بوصلة القبلة",
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = CardDefaults.outlinedCardBorder(),
+                        modifier = Modifier
+                            .weight(1f)
+                            .clickable(onClick = onNavigateToAdhkar)
+                            .testTag("prayer_times_to_adhkar_button")
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(vertical = 10.dp, horizontal = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
+                        ) {
+                            Text(text = "🤲", fontSize = 16.sp)
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Text(
+                                text = "أذكار بعد الصلاة",
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 12.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+                }
             }
 
             // 3. HEADER: ALL PRAYER TIMES
@@ -313,9 +402,16 @@ fun PrayerTimesScreen(
         ) {
             MuezzinSelectionSheetContent(
                 selectedMuezzin = selectedMuezzin,
+                customMuezzin = customMuezzin,
                 playerState = adhanPlayerState,
                 onSelectMuezzin = { muezzin ->
                     viewModel.selectMuezzin(muezzin)
+                },
+                onSelectCustomMuezzin = {
+                    viewModel.selectCustomMuezzin()
+                },
+                onUploadCustomAudio = { uri, name ->
+                    viewModel.uploadCustomMuezzin(uri, name)
                 },
                 onTogglePlayPreview = { muezzin ->
                     if (adhanPlayerState.isPlaying && adhanPlayerState.activeMuezzin == muezzin) {
@@ -323,6 +419,16 @@ fun PrayerTimesScreen(
                     } else {
                         viewModel.playMuezzinPreview(muezzin)
                     }
+                },
+                onTogglePlayCustomPreview = {
+                    if (adhanPlayerState.isPlaying) {
+                        viewModel.stopAdhanPreview()
+                    } else {
+                        viewModel.playCustomMuezzinPreview()
+                    }
+                },
+                onClearCustomMuezzin = {
+                    viewModel.clearCustomMuezzin()
                 },
                 onDismiss = {
                     viewModel.stopAdhanPreview()
@@ -806,11 +912,27 @@ private fun getPrayerIcon(type: PrayerType): ImageVector {
 @Composable
 fun MuezzinSelectionSheetContent(
     selectedMuezzin: AdhanMuezzin,
+    customMuezzin: CustomMuezzin,
     playerState: com.example.prayer.AdhanPlayerState,
     onSelectMuezzin: (AdhanMuezzin) -> Unit,
+    onSelectCustomMuezzin: () -> Unit,
+    onUploadCustomAudio: (android.net.Uri, String) -> Unit,
     onTogglePlayPreview: (AdhanMuezzin) -> Unit,
+    onTogglePlayCustomPreview: () -> Unit,
+    onClearCustomMuezzin: () -> Unit,
     onDismiss: () -> Unit
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val audioPicker = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: android.net.Uri? ->
+        if (uri != null) {
+            val fileName = getFileNameFromUri(context, uri) ?: "أذان مخصص من هاتفي"
+            onUploadCustomAudio(uri, fileName)
+            onSelectCustomMuezzin()
+        }
+    }
+
     Column(
         modifier = Modifier
             .fillMaxWidth()
@@ -829,7 +951,7 @@ fun MuezzinSelectionSheetContent(
                     fontSize = 18.sp
                 )
                 Text(
-                    text = "استمع لعدة أصوات واختر الصوت المفضل لديك",
+                    text = "اختر من أصوات كبار المؤذنين أو حمّل أذانك المفضل من جهازك",
                     fontFamily = TajawalFontFamily,
                     fontSize = 12.sp,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
@@ -842,8 +964,204 @@ fun MuezzinSelectionSheetContent(
         LazyColumn(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(420.dp)
+                .height(430.dp)
         ) {
+            // 0. CUSTOM AUDIO FROM PHONE
+            item {
+                Text(
+                    text = "مؤذن مخصص من هاتفك:",
+                    fontFamily = TajawalFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+
+                if (customMuezzin.filePath.isNotEmpty()) {
+                    val isSelected = customMuezzin.isEnabled
+                    val isPlayingCustom = playerState.isPlaying && playerState.isCustomActive
+
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { onSelectCustomMuezzin() }
+                            .testTag("custom_muezzin_card"),
+                        shape = RoundedCornerShape(14.dp),
+                        colors = CardDefaults.cardColors(
+                            containerColor = if (isSelected) QuranGold.copy(alpha = 0.15f)
+                            else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f)
+                        ),
+                        border = if (isSelected) CardDefaults.outlinedCardBorder().copy(
+                            brush = Brush.horizontalGradient(listOf(QuranGold, QuranGold)),
+                            width = 1.5.dp
+                        ) else null
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.weight(1f)
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = onSelectCustomMuezzin
+                                )
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = "📁", fontSize = 14.sp)
+                                        Spacer(modifier = Modifier.width(6.dp))
+                                        Text(
+                                            text = customMuezzin.name,
+                                            fontFamily = TajawalFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 14.sp,
+                                            color = MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    Text(
+                                        text = "ملف صوتي مخزن محلياً على الهاتف",
+                                        fontFamily = TajawalFontFamily,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                // Play preview
+                                Box(
+                                    modifier = Modifier
+                                        .size(36.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isPlayingCustom) QuranGold else MaterialTheme.colorScheme.primaryContainer)
+                                        .clickable { onTogglePlayCustomPreview() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = if (isPlayingCustom) Icons.Default.Pause else Icons.Default.PlayArrow,
+                                        contentDescription = "استماع",
+                                        tint = if (isPlayingCustom) Color.Black else MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                Spacer(modifier = Modifier.width(4.dp))
+
+                                // Re-upload button
+                                IconButton(
+                                    onClick = { audioPicker.launch("audio/*") },
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FileUpload,
+                                        contentDescription = "تغيير الملف",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+
+                                // Delete custom
+                                IconButton(
+                                    onClick = onClearCustomMuezzin,
+                                    modifier = Modifier.size(36.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.Delete,
+                                        contentDescription = "حذف",
+                                        tint = Color(0xFFFF6B6B),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    // Upload button
+                    Surface(
+                        shape = RoundedCornerShape(14.dp),
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+                        border = CardDefaults.outlinedCardBorder(),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp)
+                            .clickable { audioPicker.launch("audio/*") }
+                            .testTag("upload_custom_muezzin_button")
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(38.dp)
+                                        .clip(CircleShape)
+                                        .background(IslamicGreen.copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.FileUpload,
+                                        contentDescription = null,
+                                        tint = IslamicGreen,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
+                                    Text(
+                                        text = "تحميل مؤذن أو أذان من هاتفك",
+                                        fontFamily = TajawalFontFamily,
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 14.sp,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = "اختر أي ملف صوتي MP3 من جهازك",
+                                        fontFamily = TajawalFontFamily,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = IslamicGreen
+                            ) {
+                                Text(
+                                    text = "اختيار ملف ➔",
+                                    fontFamily = TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = Color.White,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(10.dp))
+
+                Text(
+                    text = "أو اختر من أصوات كبار المؤذنين:",
+                    fontFamily = TajawalFontFamily,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.padding(vertical = 4.dp)
+                )
+            }
             items(AdhanMuezzin.values()) { muezzin ->
                 val isSelected = muezzin == selectedMuezzin
                 val isCurrentlyPlaying = playerState.isPlaying && playerState.activeMuezzin == muezzin
@@ -1216,4 +1534,34 @@ private fun detectCurrentLocation(context: Context, onLocationFound: (Double, Do
             onLocationFound(location.latitude, location.longitude, cityName)
         }
     } catch (_: Exception) {}
+}
+
+private fun getFileNameFromUri(context: Context, uri: Uri): String? {
+    var result: String? = null
+    if (uri.scheme == "content") {
+        val cursor = try {
+            context.contentResolver.query(uri, null, null, null, null)
+        } catch (_: Exception) {
+            null
+        }
+        try {
+            if (cursor != null && cursor.moveToFirst()) {
+                val index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+                if (index >= 0) {
+                    result = cursor.getString(index)
+                }
+            }
+        } catch (_: Exception) {
+        } finally {
+            cursor?.close()
+        }
+    }
+    if (result == null) {
+        result = uri.path
+        val cut = result?.lastIndexOf('/') ?: -1
+        if (cut != -1) {
+            result = result?.substring(cut + 1)
+        }
+    }
+    return result
 }

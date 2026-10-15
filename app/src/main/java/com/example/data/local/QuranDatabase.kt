@@ -47,11 +47,23 @@ interface BookmarkDao {
 
 @Dao
 interface ReadingProgressDao {
-    @Query("SELECT * FROM reading_progress WHERE id = 1 LIMIT 1")
+    @Query("SELECT * FROM reading_progress ORDER BY timestamp DESC LIMIT 1")
     fun getLastRead(): Flow<ReadingProgressEntity?>
+
+    @Query("SELECT * FROM reading_progress WHERE surahNumber = :surahNumber LIMIT 1")
+    fun getProgressForSurah(surahNumber: Int): Flow<ReadingProgressEntity?>
+
+    @Query("SELECT * FROM reading_progress WHERE surahNumber = :surahNumber LIMIT 1")
+    suspend fun getProgressForSurahSync(surahNumber: Int): ReadingProgressEntity?
+
+    @Query("SELECT * FROM reading_progress ORDER BY timestamp DESC")
+    fun getAllReadingProgress(): Flow<List<ReadingProgressEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
     suspend fun setLastRead(progress: ReadingProgressEntity)
+
+    @Query("DELETE FROM reading_progress WHERE surahNumber = :surahNumber")
+    suspend fun deleteProgressForSurah(surahNumber: Int)
 }
 
 @Database(
@@ -61,7 +73,7 @@ interface ReadingProgressDao {
         QuranAyahEntity::class,
         SurahEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 abstract class QuranDatabase : RoomDatabase() {

@@ -498,18 +498,31 @@ class QuranRepository(private val context: Context) {
 
     suspend fun deleteBookmarkById(id: Long) = bookmarkDao.deleteById(id)
 
-    // Reading progress
+    // Reading progress (Per-Surah bookmarks & Global last read)
     fun getLastRead(): Flow<ReadingProgressEntity?> = readingProgressDao.getLastRead()
+
+    fun getProgressForSurah(surahNumber: Int): Flow<ReadingProgressEntity?> =
+        readingProgressDao.getProgressForSurah(surahNumber)
+
+    suspend fun getProgressForSurahSync(surahNumber: Int): ReadingProgressEntity? =
+        readingProgressDao.getProgressForSurahSync(surahNumber)
+
+    fun getAllReadingProgress(): Flow<List<ReadingProgressEntity>> =
+        readingProgressDao.getAllReadingProgress()
 
     suspend fun saveLastRead(surahNumber: Int, ayahNumber: Int, surahName: String, ayahTextPreview: String) {
         readingProgressDao.setLastRead(
             ReadingProgressEntity(
-                id = 1,
                 surahNumber = surahNumber,
                 ayahNumber = ayahNumber,
                 surahName = surahName,
-                ayahTextPreview = ayahTextPreview
+                ayahTextPreview = ayahTextPreview,
+                timestamp = System.currentTimeMillis()
             )
         )
+    }
+
+    suspend fun clearProgressForSurah(surahNumber: Int) {
+        readingProgressDao.deleteProgressForSurah(surahNumber)
     }
 }

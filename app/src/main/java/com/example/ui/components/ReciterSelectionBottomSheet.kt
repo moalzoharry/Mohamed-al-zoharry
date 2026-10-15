@@ -153,12 +153,30 @@ fun ReciterSelectionBottomSheet(
                                         fontSize = 15.sp,
                                         color = MaterialTheme.colorScheme.onSurface
                                     )
-                                    Text(
-                                        text = reciter.riwayah,
-                                        fontFamily = TajawalFontFamily,
-                                        fontSize = 12.sp,
-                                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                                    )
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            text = reciter.riwayah,
+                                            fontFamily = TajawalFontFamily,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                        if (reciter == QuranReciter.ISLAM_SOBHI || reciter == QuranReciter.HATEM_FARID) {
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = QuranGold.copy(alpha = 0.2f)
+                                            ) {
+                                                Text(
+                                                    text = "تلاوة خاشعة محبوبة",
+                                                    fontFamily = TajawalFontFamily,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = QuranGold,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                    }
                                 }
                             }
 

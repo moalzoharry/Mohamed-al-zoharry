@@ -112,7 +112,8 @@ enum class QuranReciter(
     val nameArabic: String,
     val nameEnglish: String,
     val riwayah: String,
-    val baseUrl: String
+    val baseUrl: String,
+    val isSurahLevel: Boolean = false
 ) {
     ALAFASY(
         id = "alafasy",
@@ -141,6 +142,22 @@ enum class QuranReciter(
         nameEnglish = "Mohamed Siddiq Al-Minshawi",
         riwayah = "مرتل - حفص عن عاصم",
         baseUrl = "https://everyayah.com/data/Minshawy_Murattal_128kbps/"
+    ),
+    ISLAM_SOBHI(
+        id = "islam_sobhi",
+        nameArabic = "الشيخ إسلام صبحي",
+        nameEnglish = "Islam Sobhi",
+        riwayah = "تلاوة خاشعة - حفص عن عاصم",
+        baseUrl = "https://server14.mp3quran.net/islam/",
+        isSurahLevel = true
+    ),
+    HATEM_FARID(
+        id = "hatem_farid",
+        nameArabic = "الشيخ حاتم فريد الواعر",
+        nameEnglish = "Hatem Farid Al-Waer",
+        riwayah = "تلاوة خاشعة - حفص عن عاصم",
+        baseUrl = "https://server11.mp3quran.net/hatem/",
+        isSurahLevel = true
     ),
     AL_GHAMDI(
         id = "al_ghamdi",

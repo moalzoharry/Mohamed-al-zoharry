@@ -71,6 +71,13 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     val lastRead: StateFlow<ReadingProgressEntity?> = repository.getLastRead()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
 
+    val allReadingProgress: StateFlow<List<ReadingProgressEntity>> = repository.getAllReadingProgress()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+
+    val customMuezzin: StateFlow<com.example.prayer.CustomMuezzin> = prayerRepository.customMuezzinFlow
+
+    val activeAdhanOverlayPrayer = MutableStateFlow<com.example.prayer.PrayerType?>(null)
+
     // Search state
     val searchQuery = MutableStateFlow("")
     val searchFilter = MutableStateFlow(SearchFilter.ALL)
@@ -207,28 +214,43 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         DailyWirdScheduler.showNotification(getApplication(), dailyWirdReminder.value, isTest = true)
     }
 
-    fun loadSurah(surahNumber: Int, targetAyahNumber: Int = 1) {
+    fun loadSurah(surahNumber: Int, targetAyahNumber: Int? = null) {
         val surahInfo = QuranStaticData.getSurah(surahNumber) ?: return
         _currentSurah.value = surahInfo
-        scrollTargetAyah.value = targetAyahNumber
 
         viewModelScope.launch {
+            val resolvedAyah = targetAyahNumber
+                ?: repository.getProgressForSurahSync(surahNumber)?.ayahNumber
+                ?: 1
+
+            scrollTargetAyah.value = resolvedAyah
             _isLoadingAyahs.value = true
             val ayahs = repository.getSurahAyahs(surahNumber)
             _currentAyahs.value = ayahs
             _isLoadingAyahs.value = false
 
-            // Save reading progress
+            // Save reading progress for this specific Surah
             if (ayahs.isNotEmpty()) {
-                val preview = ayahs.firstOrNull { it.ayahNumber == targetAyahNumber }?.textWithTashkeel
+                val preview = ayahs.firstOrNull { it.ayahNumber == resolvedAyah }?.textWithTashkeel
                     ?: ayahs.first().textWithTashkeel
                 repository.saveLastRead(
                     surahNumber = surahNumber,
-                    ayahNumber = targetAyahNumber,
+                    ayahNumber = resolvedAyah,
                     surahName = surahInfo.nameArabic,
                     ayahTextPreview = preview
                 )
             }
+        }
+    }
+
+    fun saveSurahStopAyah(surahNumber: Int, ayahNumber: Int, surahName: String, ayahText: String) {
+        viewModelScope.launch {
+            repository.saveLastRead(
+                surahNumber = surahNumber,
+                ayahNumber = ayahNumber,
+                surahName = surahName,
+                ayahTextPreview = ayahText
+            )
         }
     }
 
@@ -360,6 +382,40 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun stopAdhanPreview() {
+        prayerRepository.adhanPlayer.stop()
+    }
+
+    fun uploadCustomMuezzin(uri: android.net.Uri, displayName: String): Boolean {
+        return prayerRepository.setCustomMuezzinFromUri(uri, displayName)
+    }
+
+    fun selectCustomMuezzin() {
+        prayerRepository.useCustomMuezzin(true)
+    }
+
+    fun clearCustomMuezzin() {
+        prayerRepository.clearCustomMuezzin()
+    }
+
+    fun playCustomMuezzinPreview() {
+        val custom = customMuezzin.value
+        if (custom.filePath.isNotEmpty()) {
+            prayerRepository.adhanPlayer.playCustomAudio(custom.filePath, custom.name)
+        }
+    }
+
+    fun openAdhanOverlay(prayerType: PrayerType) {
+        activeAdhanOverlayPrayer.value = prayerType
+        val custom = customMuezzin.value
+        if (custom.isEnabled && custom.filePath.isNotEmpty()) {
+            prayerRepository.adhanPlayer.playCustomAudio(custom.filePath, custom.name)
+        } else {
+            prayerRepository.adhanPlayer.playMuezzin(selectedMuezzin.value)
+        }
+    }
+
+    fun closeAdhanOverlay() {
+        activeAdhanOverlayPrayer.value = null
         prayerRepository.adhanPlayer.stop()
     }
 

@@ -27,7 +27,7 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         showPrayerNotification(context, prayerId, prayerName, cityName)
 
         if (alertMode == AdhanAlertMode.FULL_ADHAN || alertMode == AdhanAlertMode.TAKBEER_ONLY) {
-            playAdhanAudio(context)
+            playAdhanAudio(context, prayerName, cityName)
         }
 
         // Reschedule alarms for upcoming prayers
@@ -83,19 +83,28 @@ class PrayerAlarmReceiver : BroadcastReceiver() {
         nm.notify(prayerId.hashCode(), notification)
     }
 
-    private fun playAdhanAudio(context: Context) {
+    private fun playAdhanAudio(context: Context, prayerName: String, cityName: String) {
         try {
-            val player = MediaPlayer.create(context, R.raw.adhan_takbeer)
-            player.setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .build()
+            val prefs = context.getSharedPreferences("prayer_prefs", Context.MODE_PRIVATE)
+            val isCustom = prefs.getBoolean("custom_muezzin_active", false)
+            val customPath = prefs.getString("custom_muezzin_path", null)
+            val customName = prefs.getString("custom_muezzin_name", "مؤذن مخصص من الهاتف") ?: "مؤذن مخصص"
+
+            val muezzinId = prefs.getString("selected_muezzin", AdhanMuezzin.MAKKAH.name) ?: AdhanMuezzin.MAKKAH.name
+            val muezzin = try { AdhanMuezzin.valueOf(muezzinId) } catch (_: Exception) { AdhanMuezzin.MAKKAH }
+
+            val customFile = if (isCustom && !customPath.isNullOrEmpty()) customPath else null
+            val audioUrl = if (customFile != null) null else muezzin.audioUrl
+            val muezzinTitle = if (customFile != null) customName else muezzin.nameArabic
+
+            AdhanPlaybackService.start(
+                context = context,
+                prayerName = prayerName,
+                cityName = cityName,
+                muezzinName = muezzinTitle,
+                audioUrl = audioUrl,
+                customAudioPath = customFile
             )
-            player.setOnCompletionListener { mp ->
-                mp.release()
-            }
-            player.start()
         } catch (_: Exception) {}
     }
 

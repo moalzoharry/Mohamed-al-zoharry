@@ -38,6 +38,8 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Tab
+import androidx.compose.material3.TabRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -45,6 +47,7 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -58,6 +61,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.local.BookmarkEntity
+import com.example.data.local.ReadingProgressEntity
 import com.example.ui.components.formatArabicNumber
 import com.example.ui.theme.AmiriFontFamily
 import com.example.ui.theme.QuranGold
@@ -78,6 +82,9 @@ fun BookmarksScreen(
     BackHandler { onBack() }
 
     val bookmarks by viewModel.bookmarks.collectAsState()
+    val allReadingProgress by viewModel.allReadingProgress.collectAsState()
+    var currentPrimaryTab by remember { mutableIntStateOf(0) }
+
     var selectedTag by remember { mutableStateOf("الكل") }
     val tags = listOf("الكل", "عام", "حفظ", "تدبر", "دعاء", "مراجعة")
 
@@ -95,7 +102,7 @@ fun BookmarksScreen(
             TopAppBar(
                 title = {
                     Text(
-                        text = "العلامات المرجعية والمفضلة",
+                        text = "العلامات المرجعية وقراءاتي",
                         fontFamily = TajawalFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 18.sp
@@ -124,6 +131,172 @@ fun BookmarksScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            // Main Navigation Tabs: Per-Surah Bookmarks vs Saved Ayahs
+            TabRow(
+                selectedTabIndex = currentPrimaryTab,
+                containerColor = MaterialTheme.colorScheme.surface,
+                contentColor = MaterialTheme.colorScheme.primary
+            ) {
+                Tab(
+                    selected = currentPrimaryTab == 0,
+                    onClick = { currentPrimaryTab = 0 },
+                    text = {
+                        Text(
+                            text = "📌 وقوف السور (${allReadingProgress.size})",
+                            fontFamily = TajawalFontFamily,
+                            fontWeight = if (currentPrimaryTab == 0) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 13.sp
+                        )
+                    }
+                )
+                Tab(
+                    selected = currentPrimaryTab == 1,
+                    onClick = { currentPrimaryTab = 1 },
+                    text = {
+                        Text(
+                            text = "🔖 الآيات المحفوظة (${bookmarks.size})",
+                            fontFamily = TajawalFontFamily,
+                            fontWeight = if (currentPrimaryTab == 1) FontWeight.Bold else FontWeight.Medium,
+                            fontSize = 13.sp
+                        )
+                    }
+                )
+            }
+
+            if (currentPrimaryTab == 0) {
+                // TAB 0: ALL PER-SURAH STOPPING POINTS
+                if (allReadingProgress.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Text(text = "📌", fontSize = 48.sp)
+                            Spacer(modifier = Modifier.height(14.dp))
+                            Text(
+                                text = "لم تسجل أي موضع وقوف بعد",
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 16.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(6.dp))
+                            Text(
+                                text = "عند قراءتك لأي سورة من سور القرآن الكريم، سيتم حفظ الآية التي وقفت عندها تلقائياً أو عبر الضغط على زر 📌 لتستأنف القراءة متى شئت في أي سورة (البقرة، الكهف، يس، إلخ).",
+                                fontFamily = TajawalFontFamily,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(horizontal = 16.dp, vertical = 8.dp)
+                    ) {
+                        item {
+                            Text(
+                                text = "مواضع الوقوف المحفوظة لجميع السور (${allReadingProgress.size} سورة):",
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.padding(vertical = 8.dp)
+                            )
+                        }
+
+                        items(allReadingProgress, key = { it.surahNumber }) { progress ->
+                            Card(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(vertical = 5.dp)
+                                    .clickable { onNavigateToAyah(progress.surahNumber, progress.ayahNumber) }
+                                    .testTag("surah_stop_card_${progress.surahNumber}"),
+                                shape = RoundedCornerShape(16.dp),
+                                colors = CardDefaults.cardColors(
+                                    containerColor = MaterialTheme.colorScheme.surface
+                                ),
+                                border = CardDefaults.outlinedCardBorder()
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(14.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(42.dp)
+                                                .clip(CircleShape)
+                                                .background(QuranGold.copy(alpha = 0.18f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(text = "📌", fontSize = 18.sp)
+                                        }
+
+                                        Spacer(modifier = Modifier.width(12.dp))
+
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = "سورة ${progress.surahName}",
+                                                fontFamily = TajawalFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 16.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Text(
+                                                text = "وقفت عند الآية: ${progress.ayahNumber}",
+                                                fontFamily = TajawalFontFamily,
+                                                fontWeight = FontWeight.Medium,
+                                                fontSize = 13.sp,
+                                                color = QuranGold
+                                            )
+                                            if (progress.ayahTextPreview.isNotEmpty()) {
+                                                Spacer(modifier = Modifier.height(2.dp))
+                                                Text(
+                                                    text = "«${progress.ayahTextPreview}»",
+                                                    fontFamily = AmiriFontFamily,
+                                                    fontSize = 13.sp,
+                                                    maxLines = 1,
+                                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    Surface(
+                                        shape = RoundedCornerShape(10.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer
+                                    ) {
+                                        Text(
+                                            text = "متابعة ➔",
+                                            fontFamily = TajawalFontFamily,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 12.sp,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        item {
+                            Spacer(modifier = Modifier.height(40.dp))
+                        }
+                    }
+                }
+            } else {
+                // TAB 1: SAVED AYAHS AND NOTES
             // Category Filter Chips
             Row(
                 modifier = Modifier
@@ -219,6 +392,7 @@ fun BookmarksScreen(
                         Spacer(modifier = Modifier.height(40.dp))
                     }
                 }
+            }
             }
         }
     }

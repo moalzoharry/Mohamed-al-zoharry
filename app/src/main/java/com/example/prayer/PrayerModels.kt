@@ -96,6 +96,16 @@ enum class AdhanMuezzin(
 }
 
 /**
+ * Custom Muezzin audio loaded directly from user's phone storage.
+ */
+data class CustomMuezzin(
+    val isEnabled: Boolean = false,
+    val name: String = "أذان مخصص من الهاتف",
+    val filePath: String = ""
+)
+
+
+/**
  * Standard Islamic calculation methods.
  */
 enum class CalculationMethod(

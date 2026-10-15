@@ -61,6 +61,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -99,6 +100,9 @@ fun SurahReaderScreen(
     val isLoading by viewModel.isLoadingAyahs.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val bookmarks by viewModel.bookmarks.collectAsState()
+    val allReadingProgress by viewModel.allReadingProgress.collectAsState()
+    val currentSurahProgress = allReadingProgress.firstOrNull { it.surahNumber == currentSurah?.number }
+    val savedStopAyah = currentSurahProgress?.ayahNumber
     val audioState by viewModel.audioPlayerState.collectAsState()
     val selectedAyahForTafsir by viewModel.selectedAyahForTafsir.collectAsState()
     val scrollTargetAyah by viewModel.scrollTargetAyah.collectAsState()
@@ -294,6 +298,78 @@ fun SurahReaderScreen(
                             }
                         }
 
+                        // 2.5. SAVED STOPPING POINT BANNER IN THIS SURAH
+                        if (savedStopAyah != null && savedStopAyah > 1) {
+                            item {
+                                Surface(
+                                    shape = RoundedCornerShape(14.dp),
+                                    color = QuranGold.copy(alpha = 0.12f),
+                                    border = CardDefaults.outlinedCardBorder().copy(
+                                        brush = Brush.horizontalGradient(listOf(QuranGold, Color.White.copy(alpha = 0.6f))),
+                                        width = 1.2.dp
+                                    ),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 14.dp, vertical = 6.dp)
+                                        .clickable {
+                                            val index = ayahs.indexOfFirst { it.ayahNumber == savedStopAyah }
+                                            if (index >= 0) {
+                                                val offset = if (surah.number != 9 && surah.number != 1) 3 else 2
+                                                coroutineScope.launch {
+                                                    listState.animateScrollToItem((index + offset).coerceAtLeast(0))
+                                                }
+                                            }
+                                        }
+                                        .testTag("saved_stop_ayah_banner")
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 14.dp, vertical = 10.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Row(
+                                            verticalAlignment = Alignment.CenterVertically,
+                                            modifier = Modifier.weight(1f)
+                                        ) {
+                                            Text(text = "📌", fontSize = 18.sp)
+                                            Spacer(modifier = Modifier.width(10.dp))
+                                            Column {
+                                                Text(
+                                                    text = "موضع وقوفك في سورة ${surah.nameArabic}: الآية $savedStopAyah",
+                                                    fontFamily = TajawalFontFamily,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 13.sp,
+                                                    color = textColor
+                                                )
+                                                Text(
+                                                    text = "اضغط للقفز المباشر لموضع وقوفك ومتابعة التلاوة",
+                                                    fontFamily = TajawalFontFamily,
+                                                    fontSize = 11.sp,
+                                                    color = Color(theme.secondaryTextHex)
+                                                )
+                                            }
+                                        }
+
+                                        Surface(
+                                            shape = RoundedCornerShape(8.dp),
+                                            color = QuranGold
+                                        ) {
+                                            Text(
+                                                text = "انتقال ➔",
+                                                fontFamily = TajawalFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 11.sp,
+                                                color = Color.Black,
+                                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
                         // 3. READING CONTENT: AYAH BY AYAH OR CONTINUOUS
                         if (settings.readingMode == ReadingMode.AYAH_BY_AYAH) {
                             itemsIndexed(ayahs, key = { _, ayah -> "${ayah.surahNumber}_${ayah.ayahNumber}" }) { _, ayah ->
@@ -303,6 +379,7 @@ fun SurahReaderScreen(
                                 val isPlaying = audioState.isPlaying &&
                                         audioState.currentSurah == ayah.surahNumber &&
                                         audioState.currentAyah == ayah.ayahNumber
+                                val isStopPoint = (savedStopAyah == ayah.ayahNumber)
 
                                 AyahItemCard(
                                     ayah = ayah,
@@ -310,8 +387,23 @@ fun SurahReaderScreen(
                                     settings = settings,
                                     isBookmarked = isBookmarked,
                                     isPlaying = isPlaying,
+                                    isSavedStopPoint = isStopPoint,
                                     onTafsirClick = { viewModel.openTafsir(ayah) },
                                     onBookmarkClick = { viewModel.toggleBookmark(ayah, surah.nameArabic) },
+                                    onSaveStopPointClick = {
+                                        viewModel.saveSurahStopAyah(
+                                            surahNumber = ayah.surahNumber,
+                                            ayahNumber = ayah.ayahNumber,
+                                            surahName = surah.nameArabic,
+                                            ayahText = ayah.textWithTashkeel
+                                        )
+                                        coroutineScope.launch {
+                                            snackbarHostState.showSnackbar(
+                                                message = "📌 تم حفظ الآية ${ayah.ayahNumber} كموضع وقوفك في سورة ${surah.nameArabic}",
+                                                withDismissAction = true
+                                            )
+                                        }
+                                    },
                                     onPlayClick = {
                                         if (isPlaying) {
                                             viewModel.audioPlayer.togglePlayPause()

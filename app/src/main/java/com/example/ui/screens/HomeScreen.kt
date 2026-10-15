@@ -43,6 +43,9 @@ import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.ui.text.style.TextOverflow
+import com.example.ui.components.MuslimMunaUpcomingPrayerBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.example.ui.components.AudioBottomPlayer
@@ -84,7 +87,12 @@ fun HomeScreen(
     onNavigateToBookmarks: () -> Unit,
     onNavigateToDuaaKhatm: () -> Unit,
     onNavigateToPrayerTimes: () -> Unit,
+    onNavigateToQibla: () -> Unit = {},
+    onNavigateToAdhkar: () -> Unit = {},
+    onNavigateToTasbih: () -> Unit = {},
+    onNavigateToMustajabDuaa: () -> Unit = {},
     onOpenSettings: () -> Unit,
+    onOpenAbout: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val surahs = viewModel.allSurahs
@@ -136,14 +144,19 @@ fun HomeScreen(
                                 text = "المصحف الرقمي",
                                 fontFamily = TajawalFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 20.sp,
-                                color = MaterialTheme.colorScheme.onSurface
+                                fontSize = 19.sp,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                maxLines = 1,
+                                softWrap = false,
+                                overflow = TextOverflow.Ellipsis
                             )
                             Text(
                                 text = "تفسير الجلالين • التفسير الميسر",
                                 fontFamily = TajawalFontFamily,
                                 fontSize = 11.sp,
-                                color = MaterialTheme.colorScheme.primary
+                                color = MaterialTheme.colorScheme.primary,
+                                maxLines = 1,
+                                softWrap = false
                             )
                         }
                     }
@@ -185,23 +198,23 @@ fun HomeScreen(
                     }
 
                     IconButton(
-                        onClick = onNavigateToBookmarks,
-                        modifier = Modifier.testTag("bookmarks_icon_button")
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Bookmark,
-                            contentDescription = "العلامات المرجعية",
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-
-                    IconButton(
                         onClick = onNavigateToPrayerTimes,
                         modifier = Modifier.testTag("home_prayer_times_icon_button")
                     ) {
                         Icon(
                             imageVector = Icons.Default.Mosque,
                             contentDescription = "مواقيت الصلاة والأذان",
+                            tint = QuranGold
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onOpenAbout,
+                        modifier = Modifier.testTag("about_app_icon_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "حول البرنامج والمطور (م. محمد الزهري)",
                             tint = QuranGold
                         )
                     }
@@ -381,12 +394,120 @@ fun HomeScreen(
                 }
             }
 
+            // 0.45. MUSLIM MUNA UPCOMING PRAYER TICKER / REMINDER TAB
+            item {
+                MuslimMunaUpcomingPrayerBar(
+                    schedule = prayerSchedule,
+                    muezzinName = viewModel.selectedMuezzin.collectAsState().value.nameArabic,
+                    onOpenLiveAdhan = { prayerType ->
+                        viewModel.openAdhanOverlay(prayerType)
+                    },
+                    onToggleAlertMode = { prayerType ->
+                        viewModel.togglePrayerAlert(prayerType)
+                    },
+                    onClickBar = onNavigateToPrayerTimes,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                )
+            }
+
             // 0.5. LIVE PRAYER COUNTDOWN & ADHAN CARD
             item {
                 PrayerCountdownCard(
                     schedule = prayerSchedule,
                     onClick = onNavigateToPrayerTimes
                 )
+            }
+
+            // 0.6. ISLAMIC SERVICES & WORSHIP QUICK GRID
+            item {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 6.dp)
+                        .testTag("islamic_services_grid_card"),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surface
+                    ),
+                    border = CardDefaults.outlinedCardBorder(),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(14.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "بوابة العبادات والأدعية المباركة",
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                            Text(
+                                text = "خدمات إسلامية متكاملة",
+                                fontFamily = TajawalFontFamily,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Row 1
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IslamicQuickServiceTile(
+                                iconText = "🕋",
+                                title = "بوصلة القبلة",
+                                subtitle = "مستشعرات الهاتف",
+                                onClick = onNavigateToQibla,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_qibla_tile"
+                            )
+                            IslamicQuickServiceTile(
+                                iconText = "📿",
+                                title = "السبحة",
+                                subtitle = "عداد مفتوح وحر",
+                                onClick = onNavigateToTasbih,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_tasbih_tile"
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Row 2
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IslamicQuickServiceTile(
+                                iconText = "☀️",
+                                title = "الأذكار",
+                                subtitle = "الصباح والمساء",
+                                onClick = onNavigateToAdhkar,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_adhkar_tile"
+                            )
+                            IslamicQuickServiceTile(
+                                iconText = "🤲",
+                                title = "أدعية مستجابة",
+                                subtitle = "الكنز والشعراوي",
+                                onClick = onNavigateToMustajabDuaa,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_mustajab_duaa_tile"
+                            )
+                        }
+                    }
+                }
             }
 
             // 1. LAST READ BANNER / HERO
@@ -677,3 +798,50 @@ fun JuzItemCard(
         }
     }
 }
+
+@Composable
+fun IslamicQuickServiceTile(
+    iconText: String,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    testTag: String = ""
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
+        modifier = modifier
+            .clip(RoundedCornerShape(14.dp))
+            .clickable(onClick = onClick)
+            .testTag(testTag)
+    ) {
+        Column(
+            modifier = Modifier.padding(vertical = 10.dp, horizontal = 6.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Text(
+                text = iconText,
+                fontSize = 24.sp
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = title,
+                fontFamily = TajawalFontFamily,
+                fontWeight = FontWeight.Bold,
+                fontSize = 12.sp,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = subtitle,
+                fontFamily = TajawalFontFamily,
+                fontSize = 10.sp,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+

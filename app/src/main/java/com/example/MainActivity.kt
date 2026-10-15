@@ -21,13 +21,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.LayoutDirection
+import com.example.adhkar.AdhkarCategory
+import com.example.ui.components.AboutAppBottomSheet
 import com.example.ui.components.ReadingSettingsBottomSheet
+import com.example.ui.screens.AdhanLiveOverlayScreen
+import com.example.ui.screens.AdhkarScreen
 import com.example.ui.screens.AdvancedSearchScreen
 import com.example.ui.screens.BookmarksScreen
 import com.example.ui.screens.DuaaKhatmScreen
 import com.example.ui.screens.HomeScreen
-import com.example.ui.screens.SurahReaderScreen
+import com.example.ui.screens.MustajabDuaaScreen
 import com.example.ui.screens.PrayerTimesScreen
+import com.example.ui.screens.QiblaCompassScreen
+import com.example.ui.screens.SurahReaderScreen
+import com.example.ui.screens.TasbihScreen
 import com.example.ui.theme.QuranAppTheme
 import com.example.ui.viewmodel.QuranViewModel
 
@@ -38,6 +45,10 @@ sealed interface QuranScreen {
     object Bookmarks : QuranScreen
     object DuaaKhatm : QuranScreen
     object PrayerTimes : QuranScreen
+    object Qibla : QuranScreen
+    data class Adhkar(val category: AdhkarCategory = AdhkarCategory.MORNING) : QuranScreen
+    object Tasbih : QuranScreen
+    object MustajabDuaa : QuranScreen
 }
 
 class MainActivity : ComponentActivity() {
@@ -63,6 +74,15 @@ class MainActivity : ComponentActivity() {
 
             var showSettingsSheet by remember { mutableStateOf(false) }
             val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+            var showAboutSheet by remember { mutableStateOf(false) }
+            val aboutSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+            val activeAdhanOverlayPrayer by viewModel.activeAdhanOverlayPrayer.collectAsState()
+            val prayerSchedule by viewModel.prayerSchedule.collectAsState()
+            val selectedMuezzin by viewModel.selectedMuezzin.collectAsState()
+            val customMuezzin by viewModel.customMuezzin.collectAsState()
+            val adhanPlayerState by viewModel.adhanPlayerState.collectAsState()
 
             // RTL support for authentic Arabic Quranic experience
             CompositionLocalProvider(LocalLayoutDirection provides LayoutDirection.Rtl) {
@@ -96,8 +116,23 @@ class MainActivity : ComponentActivity() {
                                     onNavigateToPrayerTimes = {
                                         screenStack = screenStack + QuranScreen.PrayerTimes
                                     },
+                                    onNavigateToQibla = {
+                                        screenStack = screenStack + QuranScreen.Qibla
+                                    },
+                                    onNavigateToAdhkar = {
+                                        screenStack = screenStack + QuranScreen.Adhkar()
+                                    },
+                                    onNavigateToTasbih = {
+                                        screenStack = screenStack + QuranScreen.Tasbih
+                                    },
+                                    onNavigateToMustajabDuaa = {
+                                        screenStack = screenStack + QuranScreen.MustajabDuaa
+                                    },
                                     onOpenSettings = {
                                         showSettingsSheet = true
+                                    },
+                                    onOpenAbout = {
+                                        showAboutSheet = true
                                     }
                                 )
                             }
@@ -152,6 +187,42 @@ class MainActivity : ComponentActivity() {
                                     viewModel = viewModel,
                                     onBack = {
                                         if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    },
+                                    onNavigateToQibla = {
+                                        screenStack = screenStack + QuranScreen.Qibla
+                                    },
+                                    onNavigateToAdhkar = {
+                                        screenStack = screenStack + QuranScreen.Adhkar(AdhkarCategory.AFTER_PRAYER)
+                                    }
+                                )
+                            }
+                            is QuranScreen.Qibla -> {
+                                QiblaCompassScreen(
+                                    viewModel = viewModel,
+                                    onBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
+                            is QuranScreen.Adhkar -> {
+                                AdhkarScreen(
+                                    initialCategory = screen.category,
+                                    onBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
+                            is QuranScreen.Tasbih -> {
+                                TasbihScreen(
+                                    onBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
+                            is QuranScreen.MustajabDuaa -> {
+                                MustajabDuaaScreen(
+                                    onBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
                                     }
                                 )
                             }
@@ -163,6 +234,31 @@ class MainActivity : ComponentActivity() {
                                 sheetState = settingsSheetState,
                                 onDismissRequest = { showSettingsSheet = false },
                                 onSaveSettings = { newSettings -> viewModel.updateSettings(newSettings) }
+                            )
+                        }
+
+                        if (showAboutSheet) {
+                            AboutAppBottomSheet(
+                                sheetState = aboutSheetState,
+                                onDismissRequest = { showAboutSheet = false }
+                            )
+                        }
+
+                        // Full-screen Islamic Adhan Overlay with Prayer Wallpaper & Actions
+                        activeAdhanOverlayPrayer?.let { prayerType ->
+                            AdhanLiveOverlayScreen(
+                                prayerType = prayerType,
+                                schedule = prayerSchedule,
+                                muezzinName = if (customMuezzin.isEnabled && customMuezzin.filePath.isNotEmpty()) customMuezzin.name else selectedMuezzin.nameArabic,
+                                isPlaying = adhanPlayerState.isPlaying,
+                                onStopAdhan = { viewModel.stopAdhanPreview() },
+                                onDismiss = { viewModel.closeAdhanOverlay() },
+                                onNavigateToQibla = {
+                                    screenStack = screenStack + QuranScreen.Qibla
+                                },
+                                onStartPrayer = {
+                                    screenStack = screenStack + QuranScreen.Adhkar(AdhkarCategory.AFTER_PRAYER)
+                                }
                             )
                         }
                     }

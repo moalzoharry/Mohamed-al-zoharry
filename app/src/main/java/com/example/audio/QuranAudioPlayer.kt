@@ -90,7 +90,11 @@ class QuranAudioPlayer(private val context: Context) {
 
             val surahFormatted = String.format("%03d", surahNumber)
             val ayahFormatted = String.format("%03d", ayahNumber)
-            val audioUrl = "${reciter.baseUrl}$surahFormatted$ayahFormatted.mp3"
+            val audioUrl = if (reciter.isSurahLevel) {
+                "${reciter.baseUrl}$surahFormatted.mp3"
+            } else {
+                "${reciter.baseUrl}$surahFormatted$ayahFormatted.mp3"
+            }
 
             mediaPlayer = MediaPlayer().apply {
                 setAudioAttributes(

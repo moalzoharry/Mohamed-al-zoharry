@@ -60,8 +60,10 @@ fun AyahItemCard(
     settings: ReadingSettings,
     isBookmarked: Boolean,
     isPlaying: Boolean,
+    isSavedStopPoint: Boolean = false,
     onTafsirClick: () -> Unit,
     onBookmarkClick: () -> Unit,
+    onSaveStopPointClick: () -> Unit = {},
     onPlayClick: () -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -134,6 +136,28 @@ fun AyahItemCard(
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
                                 color = accentColor
+                            )
+                        }
+                    }
+                }
+
+                if (isSavedStopPoint) {
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = QuranGold.copy(alpha = 0.2f)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                        ) {
+                            Text(text = "📌", fontSize = 11.sp)
+                            Spacer(modifier = Modifier.width(4.dp))
+                            Text(
+                                text = "موضع وقوفك المحفوظ",
+                                fontFamily = TajawalFontFamily,
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = QuranGold
                             )
                         }
                     }
@@ -231,6 +255,19 @@ fun AyahItemCard(
                             contentDescription = "علامة مرجعية",
                             tint = if (isBookmarked) QuranGold else secondaryColor,
                             modifier = Modifier.size(20.dp)
+                        )
+                    }
+
+                    // Save Stop Position in Surah (حفظ موضع الوقوف)
+                    IconButton(
+                        onClick = onSaveStopPointClick,
+                        modifier = Modifier
+                            .size(36.dp)
+                            .testTag("save_stop_point_${ayah.ayahNumber}")
+                    ) {
+                        Text(
+                            text = if (isSavedStopPoint) "📌" else "📍",
+                            fontSize = 16.sp
                         )
                     }
 

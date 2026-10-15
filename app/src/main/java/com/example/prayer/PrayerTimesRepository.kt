@@ -29,6 +29,9 @@ class PrayerTimesRepository(private val context: Context) {
     private val _selectedMuezzinFlow = MutableStateFlow(loadMuezzin())
     val selectedMuezzinFlow: StateFlow<AdhanMuezzin> = _selectedMuezzinFlow.asStateFlow()
 
+    private val _customMuezzinFlow = MutableStateFlow(loadCustomMuezzin())
+    val customMuezzinFlow: StateFlow<CustomMuezzin> = _customMuezzinFlow.asStateFlow()
+
     private val _scheduleFlow = MutableStateFlow(buildScheduleNow())
     val scheduleFlow: StateFlow<PrayerSchedule> = _scheduleFlow.asStateFlow()
 
@@ -68,6 +71,13 @@ class PrayerTimesRepository(private val context: Context) {
         return try { AdhanMuezzin.valueOf(muezzinId) } catch (_: Exception) { AdhanMuezzin.MAKKAH }
     }
 
+    private fun loadCustomMuezzin(): CustomMuezzin {
+        val enabled = prefs.getBoolean("custom_muezzin_active", false)
+        val path = prefs.getString("custom_muezzin_path", "") ?: ""
+        val name = prefs.getString("custom_muezzin_name", "أذان مخصص من الهاتف") ?: "أذان مخصص من الهاتف"
+        return CustomMuezzin(isEnabled = enabled && path.isNotEmpty(), name = name, filePath = path)
+    }
+
     fun setCity(city: CityPreset) {
         _selectedCityFlow.value = city
         _selectedMethodFlow.value = city.defaultMethod
@@ -97,7 +107,55 @@ class PrayerTimesRepository(private val context: Context) {
 
     fun setSelectedMuezzin(muezzin: AdhanMuezzin) {
         _selectedMuezzinFlow.value = muezzin
-        prefs.edit().putString("selected_muezzin", muezzin.name).apply()
+        prefs.edit()
+            .putString("selected_muezzin", muezzin.name)
+            .putBoolean("custom_muezzin_active", false)
+            .apply()
+        _customMuezzinFlow.value = _customMuezzinFlow.value.copy(isEnabled = false)
+    }
+
+    fun setCustomMuezzinFromUri(uri: android.net.Uri, displayName: String): Boolean {
+        try {
+            val destination = java.io.File(context.filesDir, "custom_user_adhan.mp3")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                java.io.FileOutputStream(destination).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            if (destination.exists() && destination.length() > 0) {
+                prefs.edit()
+                    .putBoolean("custom_muezzin_active", true)
+                    .putString("custom_muezzin_path", destination.absolutePath)
+                    .putString("custom_muezzin_name", displayName)
+                    .apply()
+                _customMuezzinFlow.value = CustomMuezzin(
+                    isEnabled = true,
+                    name = displayName,
+                    filePath = destination.absolutePath
+                )
+                return true
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        return false
+    }
+
+    fun useCustomMuezzin(active: Boolean) {
+        val current = _customMuezzinFlow.value
+        if (current.filePath.isNotEmpty()) {
+            prefs.edit().putBoolean("custom_muezzin_active", active).apply()
+            _customMuezzinFlow.value = current.copy(isEnabled = active)
+        }
+    }
+
+    fun clearCustomMuezzin() {
+        prefs.edit()
+            .putBoolean("custom_muezzin_active", false)
+            .remove("custom_muezzin_path")
+            .remove("custom_muezzin_name")
+            .apply()
+        _customMuezzinFlow.value = CustomMuezzin(isEnabled = false, name = "أذان مخصص من الهاتف", filePath = "")
     }
 
     fun getAlertMode(prayer: PrayerType): AdhanAlertMode {
