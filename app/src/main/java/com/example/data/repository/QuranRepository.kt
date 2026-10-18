@@ -62,6 +62,9 @@ class QuranRepository(private val context: Context) {
     private val _dailyWirdFlow = MutableStateFlow(loadDailyWirdReminder())
     val dailyWirdFlow = _dailyWirdFlow.asStateFlow()
 
+    private val _periodicDhikrFlow = MutableStateFlow(loadPeriodicDhikrReminder())
+    val periodicDhikrFlow = _periodicDhikrFlow.asStateFlow()
+
     init {
         // Pre-populate Surah 1 (Al-Fatihah)
         loadSurahFromAssets(1)?.let {
@@ -124,6 +127,8 @@ class QuranRepository(private val context: Context) {
         val autoNightName = prefs.getString("auto_night_mode", com.example.data.model.AutoNightModeOption.AUTO_TIME.name) ?: com.example.data.model.AutoNightModeOption.AUTO_TIME.name
         val autoNight = try { com.example.data.model.AutoNightModeOption.valueOf(autoNightName) } catch (_: Exception) { com.example.data.model.AutoNightModeOption.AUTO_TIME }
         val eyeComfort = prefs.getBoolean("eye_comfort_filter", false)
+        val langCode = prefs.getString("app_language", com.example.util.AppLanguage.ARABIC.code) ?: com.example.util.AppLanguage.ARABIC.code
+        val appLang = com.example.util.AppLanguage.fromCode(langCode)
 
         return ReadingSettings(
             quranFontSize = qSize,
@@ -137,12 +142,14 @@ class QuranRepository(private val context: Context) {
             repeatMode = repeat,
             autoScrollAudio = autoScroll,
             autoNightMode = autoNight,
-            eyeComfortWarmFilter = eyeComfort
+            eyeComfortWarmFilter = eyeComfort,
+            appLanguage = appLang
         )
     }
 
     fun updateSettings(newSettings: ReadingSettings) {
         _settingsFlow.value = newSettings
+        com.example.util.LocalizationManager.saveLanguage(context, newSettings.appLanguage)
         prefs.edit()
             .putFloat("quran_font_size", newSettings.quranFontSize)
             .putFloat("tafsir_font_size", newSettings.tafsirFontSize)
@@ -156,6 +163,7 @@ class QuranRepository(private val context: Context) {
             .putBoolean("auto_scroll_audio", newSettings.autoScrollAudio)
             .putString("auto_night_mode", newSettings.autoNightMode.name)
             .putBoolean("eye_comfort_filter", newSettings.eyeComfortWarmFilter)
+            .putString("app_language", newSettings.appLanguage.code)
             .apply()
     }
 
@@ -200,6 +208,43 @@ class QuranRepository(private val context: Context) {
             DailyWirdScheduler.schedule(context, newReminder)
         } else {
             DailyWirdScheduler.cancel(context)
+        }
+    }
+
+    fun loadPeriodicDhikrReminder(): com.example.data.model.PeriodicDhikrReminder {
+        val enabled = prefs.getBoolean("periodic_dhikr_enabled", false)
+        val interval = prefs.getInt("periodic_dhikr_interval", 5)
+        val text = prefs.getString("periodic_dhikr_text", "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى سَيِّدِنَا مُحَمَّدٍ ﷺ")
+            ?: "اللَّهُمَّ صَلِّ وَسَلِّمْ عَلَى سَيِّدِنَا مُحَمَّدٍ ﷺ"
+        val rotation = prefs.getBoolean("periodic_dhikr_rotation", false)
+        val sound = prefs.getBoolean("periodic_dhikr_sound", true)
+        val vibrate = prefs.getBoolean("periodic_dhikr_vibrate", true)
+
+        return com.example.data.model.PeriodicDhikrReminder(
+            isEnabled = enabled,
+            intervalMinutes = interval,
+            selectedDhikrText = text,
+            isRandomPresetRotation = rotation,
+            soundEnabled = sound,
+            vibrateEnabled = vibrate
+        )
+    }
+
+    fun updatePeriodicDhikrReminder(newReminder: com.example.data.model.PeriodicDhikrReminder) {
+        _periodicDhikrFlow.value = newReminder
+        prefs.edit()
+            .putBoolean("periodic_dhikr_enabled", newReminder.isEnabled)
+            .putInt("periodic_dhikr_interval", newReminder.intervalMinutes)
+            .putString("periodic_dhikr_text", newReminder.selectedDhikrText)
+            .putBoolean("periodic_dhikr_rotation", newReminder.isRandomPresetRotation)
+            .putBoolean("periodic_dhikr_sound", newReminder.soundEnabled)
+            .putBoolean("periodic_dhikr_vibrate", newReminder.vibrateEnabled)
+            .apply()
+
+        if (newReminder.isEnabled) {
+            com.example.reminder.PeriodicDhikrScheduler.schedule(context, newReminder)
+        } else {
+            com.example.reminder.PeriodicDhikrScheduler.cancel(context)
         }
     }
 
@@ -360,6 +405,7 @@ class QuranRepository(private val context: Context) {
                 MatchType.QURAN -> entity.textWithTashkeel
                 MatchType.JALALAYN -> entity.tafsirJalalayn
                 MatchType.MUYASSAR -> entity.tafsirMuyassar
+                MatchType.SHAARAWI -> com.example.data.model.ShaarawyTafsirData.getGeneralReflectionForAyah(entity.surahNumber, entity.ayahNumber)
             }
 
             resultsMap[key] = SearchResult(

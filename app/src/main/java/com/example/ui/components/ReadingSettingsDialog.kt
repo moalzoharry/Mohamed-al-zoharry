@@ -90,6 +90,7 @@ fun ReadingSettingsBottomSheet(
     var autoScrollAudio by remember(settings) { mutableStateOf(settings.autoScrollAudio) }
     var autoNightMode by remember(settings) { mutableStateOf(settings.autoNightMode) }
     var eyeComfortWarmFilter by remember(settings) { mutableStateOf(settings.eyeComfortWarmFilter) }
+    var selectedLanguage by remember(settings) { mutableStateOf(settings.appLanguage) }
 
     fun notifySave(
         theme: ReadingTheme = selectedTheme,
@@ -103,7 +104,8 @@ fun ReadingSettingsBottomSheet(
         repeat: RepeatMode = repeatMode,
         autoScroll: Boolean = autoScrollAudio,
         nightModeOpt: AutoNightModeOption = autoNightMode,
-        eyeComfort: Boolean = eyeComfortWarmFilter
+        eyeComfort: Boolean = eyeComfortWarmFilter,
+        lang: com.example.util.AppLanguage = selectedLanguage
     ) {
         onSaveSettings(
             settings.copy(
@@ -118,7 +120,8 @@ fun ReadingSettingsBottomSheet(
                 repeatMode = repeat,
                 autoScrollAudio = autoScroll,
                 autoNightMode = nightModeOpt,
-                eyeComfortWarmFilter = eyeComfort
+                eyeComfortWarmFilter = eyeComfort,
+                appLanguage = lang
             )
         )
     }
@@ -787,6 +790,89 @@ fun ReadingSettingsBottomSheet(
                                 fontSize = 9.sp,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 11. APP & NOTIFICATION LANGUAGE (لغات البرنامج والإشعارات)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(text = "🌐", fontSize = 18.sp)
+                Spacer(modifier = Modifier.width(8.dp))
+                Column {
+                    Text(
+                        text = "لغة البرنامج والإشعارات (App Language)",
+                        fontFamily = TajawalFontFamily,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                    Text(
+                        text = "اختر اللغة: العربية، الإنجليزية، الفرنسية، التركية، الألمانية",
+                        fontFamily = TajawalFontFamily,
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                com.example.util.AppLanguage.values().forEach { appLang ->
+                    val isSelected = selectedLanguage == appLang
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                        border = if (isSelected) CardDefaults.outlinedCardBorder() else null,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                selectedLanguage = appLang
+                                notifySave(lang = appLang)
+                            }
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(text = appLang.flagEmoji, fontSize = 20.sp)
+                                Spacer(modifier = Modifier.width(10.dp))
+                                Column {
+                                    Text(
+                                        text = appLang.nativeName,
+                                        fontFamily = TajawalFontFamily,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 14.sp,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Text(
+                                        text = appLang.localizedArabic,
+                                        fontFamily = TajawalFontFamily,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                            }
+                            if (isSelected) {
+                                Icon(
+                                    imageVector = Icons.Default.Check,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }

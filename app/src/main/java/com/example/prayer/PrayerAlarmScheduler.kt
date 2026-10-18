@@ -19,14 +19,17 @@ object PrayerAlarmScheduler {
         val cityName = prefs.getString("city_name", PresetCities.defaultCity.nameArabic) ?: PresetCities.defaultCity.nameArabic
         val methodName = prefs.getString("calc_method", CalculationMethod.EGYPTIAN.name) ?: CalculationMethod.EGYPTIAN.name
         val method = try { CalculationMethod.valueOf(methodName) } catch (_: Exception) { CalculationMethod.EGYPTIAN }
+        val timeZoneId = prefs.getString("city_tz", PresetCities.defaultCity.timeZoneId) ?: PresetCities.defaultCity.timeZoneId
+        val tz = try { java.util.TimeZone.getTimeZone(timeZoneId) } catch (_: Exception) { java.util.TimeZone.getDefault() }
 
         val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager ?: return
 
-        // Compute for today and tomorrow
+        // Compute for today and tomorrow with city timezone
         val now = System.currentTimeMillis()
-        val todayTimes = PrayerTimesCalculator.calculate(lat, lng, Calendar.getInstance(), method)
+        val todayCal = Calendar.getInstance(tz)
+        val todayTimes = PrayerTimesCalculator.calculate(lat, lng, todayCal, method)
 
-        val tomorrowCal = Calendar.getInstance().apply { add(Calendar.DAY_OF_YEAR, 1) }
+        val tomorrowCal = (todayCal.clone() as Calendar).apply { add(Calendar.DAY_OF_YEAR, 1) }
         val tomorrowTimes = PrayerTimesCalculator.calculate(lat, lng, tomorrowCal, method)
 
         val prayersWithAdhan = listOf(

@@ -147,7 +147,7 @@ fun PrayerCountdownCard(
                         )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            text = nextPrayer?.timeFormatted12h ?: "--:--",
+                            text = nextPrayer?.let { if (it.timeFormattedLong.isNotEmpty()) it.timeFormattedLong else it.timeFormatted12h } ?: "--:--",
                             fontFamily = TajawalFontFamily,
                             fontWeight = FontWeight.Bold,
                             fontSize = 22.sp,

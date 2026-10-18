@@ -153,49 +153,51 @@ enum class CalculationMethod(
 }
 
 /**
- * City preset with geographical coordinates and default method.
+ * City preset with geographical coordinates, default calculation method, and timezone.
  */
 data class CityPreset(
     val nameArabic: String,
     val countryArabic: String,
     val latitude: Double,
     val longitude: Double,
-    val defaultMethod: CalculationMethod = CalculationMethod.EGYPTIAN
+    val defaultMethod: CalculationMethod = CalculationMethod.EGYPTIAN,
+    val timeZoneId: String = "Africa/Cairo",
+    val isAutoGps: Boolean = false
 )
 
 object PresetCities {
     val list: List<CityPreset> = listOf(
-        CityPreset("القاهرة", "مصر", 30.0444, 31.2357, CalculationMethod.EGYPTIAN),
-        CityPreset("الإسكندرية", "مصر", 31.2001, 29.9187, CalculationMethod.EGYPTIAN),
-        CityPreset("الجيزة", "مصر", 30.0131, 31.2089, CalculationMethod.EGYPTIAN),
-        CityPreset("المنصورة", "مصر", 31.0409, 31.3785, CalculationMethod.EGYPTIAN),
-        CityPreset("طنطا", "مصر", 30.7865, 31.0004, CalculationMethod.EGYPTIAN),
-        CityPreset("الزقازيق", "مصر", 30.5877, 31.5020, CalculationMethod.EGYPTIAN),
-        CityPreset("أسيوط", "مصر", 27.1809, 31.1837, CalculationMethod.EGYPTIAN),
-        CityPreset("سوهاج", "مصر", 26.5569, 31.6948, CalculationMethod.EGYPTIAN),
-        CityPreset("قنا", "مصر", 26.1551, 32.7160, CalculationMethod.EGYPTIAN),
-        CityPreset("الأقصر", "مصر", 25.6872, 32.6396, CalculationMethod.EGYPTIAN),
-        CityPreset("أسوان", "مصر", 24.0889, 32.8998, CalculationMethod.EGYPTIAN),
-        CityPreset("بورسعيد", "مصر", 31.2653, 32.3019, CalculationMethod.EGYPTIAN),
-        CityPreset("السويس", "مصر", 29.9668, 32.5498, CalculationMethod.EGYPTIAN),
-        CityPreset("الإسماعيلية", "مصر", 30.5965, 32.2715, CalculationMethod.EGYPTIAN),
-        CityPreset("مكة المكرمة", "المملكة العربية السعودية", 21.3891, 39.8579, CalculationMethod.UMM_AL_QURA),
-        CityPreset("المدينة المنورة", "المملكة العربية السعودية", 24.5247, 39.5692, CalculationMethod.UMM_AL_QURA),
-        CityPreset("الرياض", "المملكة العربية السعودية", 24.7136, 46.6753, CalculationMethod.UMM_AL_QURA),
-        CityPreset("جدة", "المملكة العربية السعودية", 21.5433, 39.1728, CalculationMethod.UMM_AL_QURA),
-        CityPreset("الدمام", "المملكة العربية السعودية", 26.4207, 50.0888, CalculationMethod.UMM_AL_QURA),
-        CityPreset("القدس الشريف", "فلسطين", 31.7683, 35.2137, CalculationMethod.MWL),
-        CityPreset("دبي", "الإمارات العربية المتحدة", 25.2048, 55.2708, CalculationMethod.DUBAI),
-        CityPreset("أبوظبي", "الإمارات العربية المتحدة", 24.4539, 54.3773, CalculationMethod.DUBAI),
-        CityPreset("عَمّان", "الأردن", 31.9454, 35.9284, CalculationMethod.MWL),
-        CityPreset("بيروت", "لبنان", 33.8938, 35.5018, CalculationMethod.MWL),
-        CityPreset("دمشق", "سوريا", 33.5138, 36.2765, CalculationMethod.MWL),
-        CityPreset("بغداد", "العراق", 33.3152, 44.3661, CalculationMethod.MWL),
-        CityPreset("الكويت", "الكويت", 29.3759, 47.9774, CalculationMethod.UMM_AL_QURA),
-        CityPreset("الدوحة", "قطر", 25.2854, 51.5310, CalculationMethod.UMM_AL_QURA),
-        CityPreset("المنامة", "البحرين", 26.2285, 50.5860, CalculationMethod.UMM_AL_QURA),
-        CityPreset("مسقط", "عُمان", 23.5880, 58.3829, CalculationMethod.MWL),
-        CityPreset("إسطنبول", "تركيا", 41.0082, 28.9784, CalculationMethod.MWL)
+        CityPreset("القاهرة", "مصر", 30.0444, 31.2357, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("الإسكندرية", "مصر", 31.2001, 29.9187, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("الجيزة", "مصر", 30.0131, 31.2089, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("المنصورة", "مصر", 31.0409, 31.3785, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("طنطا", "مصر", 30.7865, 31.0004, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("الزقازيق", "مصر", 30.5877, 31.5020, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("أسيوط", "مصر", 27.1809, 31.1837, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("سوهاج", "مصر", 26.5569, 31.6948, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("قنا", "مصر", 26.1551, 32.7160, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("الأقصر", "مصر", 25.6872, 32.6396, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("أسوان", "مصر", 24.0889, 32.8998, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("بورسعيد", "مصر", 31.2653, 32.3019, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("السويس", "مصر", 29.9668, 32.5498, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("الإسماعيلية", "مصر", 30.5965, 32.2715, CalculationMethod.EGYPTIAN, "Africa/Cairo"),
+        CityPreset("مكة المكرمة", "المملكة العربية السعودية", 21.3891, 39.8579, CalculationMethod.UMM_AL_QURA, "Asia/Riyadh"),
+        CityPreset("المدينة المنورة", "المملكة العربية السعودية", 24.5247, 39.5692, CalculationMethod.UMM_AL_QURA, "Asia/Riyadh"),
+        CityPreset("الرياض", "المملكة العربية السعودية", 24.7136, 46.6753, CalculationMethod.UMM_AL_QURA, "Asia/Riyadh"),
+        CityPreset("جدة", "المملكة العربية السعودية", 21.5433, 39.1728, CalculationMethod.UMM_AL_QURA, "Asia/Riyadh"),
+        CityPreset("الدمام", "المملكة العربية السعودية", 26.4207, 50.0888, CalculationMethod.UMM_AL_QURA, "Asia/Riyadh"),
+        CityPreset("القدس الشريف", "فلسطين", 31.7683, 35.2137, CalculationMethod.MWL, "Asia/Jerusalem"),
+        CityPreset("دبي", "الإمارات العربية المتحدة", 25.2048, 55.2708, CalculationMethod.DUBAI, "Asia/Dubai"),
+        CityPreset("أبوظبي", "الإمارات العربية المتحدة", 24.4539, 54.3773, CalculationMethod.DUBAI, "Asia/Dubai"),
+        CityPreset("عَمّان", "الأردن", 31.9454, 35.9284, CalculationMethod.MWL, "Asia/Amman"),
+        CityPreset("بيروت", "لبنان", 33.8938, 35.5018, CalculationMethod.MWL, "Asia/Beirut"),
+        CityPreset("دمشق", "سوريا", 33.5138, 36.2765, CalculationMethod.MWL, "Asia/Damascus"),
+        CityPreset("بغداد", "العراق", 33.3152, 44.3661, CalculationMethod.MWL, "Asia/Baghdad"),
+        CityPreset("الكويت", "الكويت", 29.3759, 47.9774, CalculationMethod.UMM_AL_QURA, "Asia/Kuwait"),
+        CityPreset("الدوحة", "قطر", 25.2854, 51.5310, CalculationMethod.UMM_AL_QURA, "Asia/Qatar"),
+        CityPreset("المنامة", "البحرين", 26.2285, 50.5860, CalculationMethod.UMM_AL_QURA, "Asia/Bahrain"),
+        CityPreset("مسقط", "عُمان", 23.5880, 58.3829, CalculationMethod.MWL, "Asia/Muscat"),
+        CityPreset("إسطنبول", "تركيا", 41.0082, 28.9784, CalculationMethod.MWL, "Europe/Istanbul")
     )
 
     val defaultCity: CityPreset = list.first()
@@ -207,6 +209,8 @@ object PresetCities {
 data class PrayerTimeItem(
     val type: PrayerType,
     val timeFormatted12h: String,
+    val timeFormattedLong: String = "",
+    val periodArabic: String = "",
     val time24h: String,
     val timestampMillis: Long,
     val alertMode: AdhanAlertMode,

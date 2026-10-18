@@ -57,8 +57,10 @@ class PrayerTimesRepository(private val context: Context) {
         val lng = prefs.getFloat("city_lng", PresetCities.defaultCity.longitude.toFloat()).toDouble()
         val methodName = prefs.getString("calc_method", PresetCities.defaultCity.defaultMethod.name) ?: PresetCities.defaultCity.defaultMethod.name
         val method = try { CalculationMethod.valueOf(methodName) } catch (_: Exception) { PresetCities.defaultCity.defaultMethod }
+        val timeZoneId = prefs.getString("city_tz", PresetCities.defaultCity.timeZoneId) ?: PresetCities.defaultCity.timeZoneId
+        val isAutoGps = prefs.getBoolean("city_is_auto_gps", false)
 
-        return CityPreset(name, country, lat, lng, method)
+        return CityPreset(name, country, lat, lng, method, timeZoneId, isAutoGps)
     }
 
     private fun loadMethod(): CalculationMethod {
@@ -87,15 +89,47 @@ class PrayerTimesRepository(private val context: Context) {
             .putFloat("city_lat", city.latitude.toFloat())
             .putFloat("city_lng", city.longitude.toFloat())
             .putString("calc_method", city.defaultMethod.name)
+            .putString("city_tz", city.timeZoneId)
+            .putBoolean("city_is_auto_gps", city.isAutoGps)
             .apply()
 
         _scheduleFlow.value = buildScheduleNow()
         PrayerAlarmScheduler.rescheduleAll(context)
+        try { com.example.widget.PrayerTimesWidgetProvider.updateAllWidgets(context) } catch (_: Exception) {}
     }
 
     fun setCoordinates(cityName: String, countryName: String, latitude: Double, longitude: Double) {
-        val customCity = CityPreset(cityName, countryName, latitude, longitude, _selectedMethodFlow.value)
+        val customCity = CityPreset(
+            nameArabic = cityName,
+            countryArabic = countryName,
+            latitude = latitude,
+            longitude = longitude,
+            defaultMethod = _selectedMethodFlow.value,
+            timeZoneId = java.util.TimeZone.getDefault().id,
+            isAutoGps = false
+        )
         setCity(customCity)
+    }
+
+    fun setAutoGpsLocation(
+        latitude: Double,
+        longitude: Double,
+        cityName: String,
+        countryName: String,
+        timeZoneId: String,
+        calculationMethod: CalculationMethod? = null
+    ) {
+        val method = calculationMethod ?: _selectedMethodFlow.value
+        val autoCity = CityPreset(
+            nameArabic = cityName,
+            countryArabic = countryName,
+            latitude = latitude,
+            longitude = longitude,
+            defaultMethod = method,
+            timeZoneId = timeZoneId,
+            isAutoGps = true
+        )
+        setCity(autoCity)
     }
 
     fun setCalculationMethod(method: CalculationMethod) {
@@ -103,6 +137,7 @@ class PrayerTimesRepository(private val context: Context) {
         prefs.edit().putString("calc_method", method.name).apply()
         _scheduleFlow.value = buildScheduleNow()
         PrayerAlarmScheduler.rescheduleAll(context)
+        try { com.example.widget.PrayerTimesWidgetProvider.updateAllWidgets(context) } catch (_: Exception) {}
     }
 
     fun setSelectedMuezzin(muezzin: AdhanMuezzin) {
@@ -176,8 +211,13 @@ class PrayerTimesRepository(private val context: Context) {
     fun buildScheduleNow(): PrayerSchedule {
         val city = _selectedCityFlow.value
         val method = _selectedMethodFlow.value
-        val nowCal = Calendar.getInstance()
-        val nowMillis = nowCal.timeInMillis
+        val tz = try {
+            java.util.TimeZone.getTimeZone(city.timeZoneId)
+        } catch (_: Exception) {
+            java.util.TimeZone.getDefault()
+        }
+        val nowCal = Calendar.getInstance(tz)
+        val nowMillis = System.currentTimeMillis()
 
         // Raw prayer times for today
         val todayRaw = PrayerTimesCalculator.calculate(city.latitude, city.longitude, nowCal, method)
@@ -202,10 +242,12 @@ class PrayerTimesRepository(private val context: Context) {
 
         // Build items for today
         val todayItems = orderedTypes.map { type ->
-            val raw = todayRaw[type] ?: PrayerRawTime(0, 0, "--:--", "--:--", 0L)
+            val raw = todayRaw[type] ?: PrayerRawTime(0, 0, "--:--", "--:--", "", "--:--", 0L)
             PrayerTimeItem(
                 type = type,
                 timeFormatted12h = raw.formatted12h,
+                timeFormattedLong = raw.formatted12hLong,
+                periodArabic = raw.periodArabic,
                 time24h = raw.formatted24h,
                 timestampMillis = raw.timestampMillis,
                 alertMode = getAlertMode(type)
@@ -250,6 +292,8 @@ class PrayerTimesRepository(private val context: Context) {
                 nextPrayerItem = PrayerTimeItem(
                     type = type,
                     timeFormatted12h = rawForNext?.formatted12h ?: "",
+                    timeFormattedLong = rawForNext?.formatted12hLong ?: "",
+                    periodArabic = rawForNext?.periodArabic ?: "",
                     time24h = rawForNext?.formatted24h ?: "",
                     timestampMillis = time,
                     alertMode = getAlertMode(type),

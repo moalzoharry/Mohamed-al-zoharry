@@ -1,6 +1,6 @@
 <resources>
-    <string name="app_name">المصحف الرقمي</string>
-    <string name="title_mushaf">المصحف الشريف</string>
+    <string name="app_name">الفرقان بلس</string>
+    <string name="title_mushaf">الفرقان بلس | Al-Furqan Plus</string>
     <string name="title_tafsir_jalalayn">تفسير الجلالين</string>
     <string name="title_tafsir_muyassar">التفسير الميسر</string>
     <string name="title_search">البحث في القرآن والتفسير</string>

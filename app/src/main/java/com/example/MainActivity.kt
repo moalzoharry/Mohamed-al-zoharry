@@ -31,14 +31,26 @@ import com.example.ui.screens.BookmarksScreen
 import com.example.ui.screens.DuaaKhatmScreen
 import com.example.ui.screens.HomeScreen
 import com.example.ui.screens.MustajabDuaaScreen
+import com.example.ui.screens.NamesOfAllahScreen
+import com.example.ui.screens.MorningEveningWirdScreen
+import com.example.ui.screens.ReverentRecitationsScreen
+import com.example.ui.screens.ShaarawyTafsirScreen
+import com.example.ui.screens.CustomAdhansScreen
+import com.example.ui.screens.FridaySermonScreen
 import com.example.ui.screens.PrayerTimesScreen
 import com.example.ui.screens.QiblaCompassScreen
 import com.example.ui.screens.SurahReaderScreen
 import com.example.ui.screens.TasbihScreen
+import com.example.ui.screens.SplashScreen
+import com.example.ui.screens.HijriCalendarScreen
+import com.example.ui.components.DonationSadaqahSheet
+import com.example.ui.components.AppUpdateDialog
+import com.example.update.AppUpdateManager
 import com.example.ui.theme.QuranAppTheme
 import com.example.ui.viewmodel.QuranViewModel
 
 sealed interface QuranScreen {
+    object Splash : QuranScreen
     object Home : QuranScreen
     data class Reader(val surahNumber: Int, val initialAyah: Int = 1) : QuranScreen
     object Search : QuranScreen
@@ -49,6 +61,13 @@ sealed interface QuranScreen {
     data class Adhkar(val category: AdhkarCategory = AdhkarCategory.MORNING) : QuranScreen
     object Tasbih : QuranScreen
     object MustajabDuaa : QuranScreen
+    object NamesOfAllah : QuranScreen
+    data class MorningEveningWird(val isEvening: Boolean = false) : QuranScreen
+    object ReverentRecitations : QuranScreen
+    object ShaarawyTafsir : QuranScreen
+    object FridaySermon : QuranScreen
+    object CustomAdhans : QuranScreen
+    object HijriCalendar : QuranScreen
 }
 
 class MainActivity : ComponentActivity() {
@@ -60,6 +79,9 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
+        // Schedule 10:00 AM and 5:00 PM Wird Alarms
+        com.example.reminder.WirdCompanionScheduler.scheduleDailyWirds(this)
+
         setContent {
             val settings by viewModel.settings.collectAsState()
             val isDarkTheme = settings.theme.isDark
@@ -69,7 +91,15 @@ class MainActivity : ComponentActivity() {
                 viewModel.checkAutoNightMode(isSystemInDark = systemInDark)
             }
 
-            var screenStack by remember { mutableStateOf(listOf<QuranScreen>(QuranScreen.Home)) }
+            val initialStack = remember {
+                if (intent?.action == com.example.reminder.WirdCompanionScheduler.ACTION_OPEN_WIRD) {
+                    val isEve = intent?.getBooleanExtra(com.example.reminder.WirdCompanionScheduler.EXTRA_IS_EVENING, false) ?: false
+                    listOf(QuranScreen.Home, QuranScreen.MorningEveningWird(isEve))
+                } else {
+                    listOf<QuranScreen>(QuranScreen.Splash)
+                }
+            }
+            var screenStack by remember { mutableStateOf(initialStack) }
             val currentScreen = screenStack.lastOrNull() ?: QuranScreen.Home
 
             var showSettingsSheet by remember { mutableStateOf(false) }
@@ -77,6 +107,13 @@ class MainActivity : ComponentActivity() {
 
             var showAboutSheet by remember { mutableStateOf(false) }
             val aboutSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+            var showDonationSheet by remember { mutableStateOf(false) }
+            val updateInfo by AppUpdateManager.updateState.collectAsState()
+
+            androidx.compose.runtime.LaunchedEffect(Unit) {
+                AppUpdateManager.checkForUpdates(this@MainActivity, forceShowSimulation = false)
+            }
 
             val activeAdhanOverlayPrayer by viewModel.activeAdhanOverlayPrayer.collectAsState()
             val prayerSchedule by viewModel.prayerSchedule.collectAsState()
@@ -97,6 +134,13 @@ class MainActivity : ComponentActivity() {
                         }
 
                         when (val screen = currentScreen) {
+                            is QuranScreen.Splash -> {
+                                SplashScreen(
+                                    onSplashFinished = {
+                                        screenStack = listOf(QuranScreen.Home)
+                                    }
+                                )
+                            }
                             is QuranScreen.Home -> {
                                 HomeScreen(
                                     viewModel = viewModel,
@@ -127,6 +171,33 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToMustajabDuaa = {
                                         screenStack = screenStack + QuranScreen.MustajabDuaa
+                                    },
+                                    onNavigateToNamesOfAllah = {
+                                        screenStack = screenStack + QuranScreen.NamesOfAllah
+                                    },
+                                    onNavigateToShaarawyTafsir = {
+                                        screenStack = screenStack + QuranScreen.ShaarawyTafsir
+                                    },
+                                    onNavigateToMorningEveningWird = { isEvening ->
+                                        screenStack = screenStack + QuranScreen.MorningEveningWird(isEvening)
+                                    },
+                                    onNavigateToReverentRecitations = {
+                                        screenStack = screenStack + QuranScreen.ReverentRecitations
+                                    },
+                                    onNavigateToFridaySermon = {
+                                        screenStack = screenStack + QuranScreen.FridaySermon
+                                    },
+                                    onNavigateToCustomAdhans = {
+                                        screenStack = screenStack + QuranScreen.CustomAdhans
+                                    },
+                                    onNavigateToHijriCalendar = {
+                                        screenStack = screenStack + QuranScreen.HijriCalendar
+                                    },
+                                    onOpenDonationSheet = {
+                                        showDonationSheet = true
+                                    },
+                                    onCheckUpdates = {
+                                        AppUpdateManager.checkForUpdates(this@MainActivity, forceShowSimulation = true)
                                     },
                                     onOpenSettings = {
                                         showSettingsSheet = true
@@ -193,6 +264,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToAdhkar = {
                                         screenStack = screenStack + QuranScreen.Adhkar(AdhkarCategory.AFTER_PRAYER)
+                                    },
+                                    onNavigateToCustomAdhans = {
+                                        screenStack = screenStack + QuranScreen.CustomAdhans
                                     }
                                 )
                             }
@@ -226,6 +300,64 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             }
+                            is QuranScreen.NamesOfAllah -> {
+                                NamesOfAllahScreen(
+                                    onNavigateBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
+                            is QuranScreen.ShaarawyTafsir -> {
+                                ShaarawyTafsirScreen(
+                                    onNavigateBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    },
+                                    onNavigateToReader = { surahNum, ayahNum ->
+                                        viewModel.loadSurah(surahNum, ayahNum)
+                                        screenStack = screenStack + QuranScreen.Reader(surahNum, ayahNum)
+                                    }
+                                )
+                            }
+                            is QuranScreen.MorningEveningWird -> {
+                                MorningEveningWirdScreen(
+                                    isEvening = screen.isEvening,
+                                    onCloseScreen = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    },
+                                    onNavigateToReader = { surahNum, ayahNum ->
+                                        viewModel.loadSurah(surahNum, ayahNum)
+                                        screenStack = screenStack + QuranScreen.Reader(surahNum, ayahNum)
+                                    }
+                                )
+                            }
+                            is QuranScreen.ReverentRecitations -> {
+                                ReverentRecitationsScreen(
+                                    onNavigateBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
+                            is QuranScreen.FridaySermon -> {
+                                FridaySermonScreen(
+                                    onNavigateBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
+                            is QuranScreen.CustomAdhans -> {
+                                CustomAdhansScreen(
+                                    onNavigateBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
+                            is QuranScreen.HijriCalendar -> {
+                                HijriCalendarScreen(
+                                    onBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
                         }
 
                         if (showSettingsSheet) {
@@ -241,6 +373,19 @@ class MainActivity : ComponentActivity() {
                             AboutAppBottomSheet(
                                 sheetState = aboutSheetState,
                                 onDismissRequest = { showAboutSheet = false }
+                            )
+                        }
+
+                        if (showDonationSheet) {
+                            DonationSadaqahSheet(
+                                onDismiss = { showDonationSheet = false }
+                            )
+                        }
+
+                        updateInfo?.let { info ->
+                            AppUpdateDialog(
+                                updateInfo = info,
+                                onDismiss = { AppUpdateManager.dismissUpdate() }
                             )
                         }
 

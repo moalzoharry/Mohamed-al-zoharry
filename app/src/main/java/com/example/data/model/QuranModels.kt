@@ -24,7 +24,8 @@ data class Ayah(
     val tafsirJalalayn: String,
     val tafsirMuyassar: String,
     val juzNumber: Int = 1,
-    val pageNumber: Int = 1
+    val pageNumber: Int = 1,
+    val tafsirShaarawi: String? = null
 )
 
 enum class TafsirSource(val title: String, val author: String, val description: String) {
@@ -37,6 +38,11 @@ enum class TafsirSource(val title: String, val author: String, val description: 
         title = "التفسير الميسر",
         author = "نخبة من علماء التفسير (مجمع الملك فهد)",
         description = "تفسير معاصر صاغه علماء مجمع الملك فهد بلغة سهلة واضحة ومباشرة لتيسير فهم الآيات لعامة المسلمين."
+    ),
+    SHAARAWI(
+        title = "خواطر الشيخ الشعراوي",
+        author = "فضيلة الإمام محمد متولي الشعراوي رحمه الله",
+        description = "خواطر إيمانية وتدبرات بيانية عميقة تقرب معاني القرآن إلى القلوب وتبرز إعجاز التشريع وعظمة الخالق."
     )
 }
 
@@ -209,13 +215,15 @@ data class ReadingSettings(
     val repeatMode: RepeatMode = RepeatMode.ONCE,
     val autoScrollAudio: Boolean = true,
     val autoNightMode: AutoNightModeOption = AutoNightModeOption.AUTO_TIME,
-    val eyeComfortWarmFilter: Boolean = false
+    val eyeComfortWarmFilter: Boolean = false,
+    val appLanguage: com.example.util.AppLanguage = com.example.util.AppLanguage.ARABIC
 )
 
 enum class MatchType(val titleArabic: String) {
     QURAN("نص الآية الكريمة"),
     JALALAYN("تفسير الجلالين"),
-    MUYASSAR("التفسير الميسر")
+    MUYASSAR("التفسير الميسر"),
+    SHAARAWI("خواطر الشيخ الشعراوي")
 }
 
 data class SearchResult(

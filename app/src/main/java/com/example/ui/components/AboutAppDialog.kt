@@ -71,6 +71,8 @@ import com.example.ui.theme.AmiriFontFamily
 import com.example.ui.theme.IslamicGreen
 import com.example.ui.theme.QuranGold
 import com.example.ui.theme.TajawalFontFamily
+import com.example.util.AppLanguage
+import com.example.util.LocalizationManager
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -468,6 +470,109 @@ fun AboutAppBottomSheet(
                                     color = IslamicGreen,
                                     fontWeight = FontWeight.Bold
                                 )
+                            }
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(18.dp))
+
+            // 4. LANGUAGE SETTINGS (لغات إعدادات البرنامج: إنجليزي، فرنسي، تركي، ألماني، عربي)
+            var currentLanguage by remember { mutableStateOf(LocalizationManager.getSavedLanguage(context)) }
+
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .testTag("app_language_card"),
+                shape = RoundedCornerShape(18.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surface
+                ),
+                border = CardDefaults.outlinedCardBorder()
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(text = "🌐", fontSize = 20.sp)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Column {
+                            Text(
+                                text = "لغات التطبيق والإشعارات",
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "اختر لغتك المفضلة للتنبيهات والأذكار",
+                                fontFamily = TajawalFontFamily,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                    ) {
+                        AppLanguage.values().forEach { lang ->
+                            val isSelected = currentLanguage == lang
+                            Surface(
+                                shape = RoundedCornerShape(10.dp),
+                                color = if (isSelected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.45f),
+                                border = if (isSelected) CardDefaults.outlinedCardBorder() else null,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable {
+                                        currentLanguage = lang
+                                        LocalizationManager.saveLanguage(context, lang)
+                                        val toastMsg = when (lang) {
+                                            AppLanguage.ARABIC -> "تم تعيين اللغة إلى العربية 🇸🇦"
+                                            AppLanguage.ENGLISH -> "Language set to English 🇬🇧"
+                                            AppLanguage.FRENCH -> "Langue définie sur Français 🇫🇷"
+                                            AppLanguage.TURKISH -> "Dil Türkçe olarak ayarlandı 🇹🇷"
+                                            AppLanguage.GERMAN -> "Sprache auf Deutsch eingestellt 🇩🇪"
+                                        }
+                                        Toast.makeText(context, toastMsg, Toast.LENGTH_SHORT).show()
+                                    }
+                            ) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(text = lang.flagEmoji, fontSize = 18.sp)
+                                        Spacer(modifier = Modifier.width(8.dp))
+                                        Text(
+                                            text = "${lang.nativeName} (${lang.localizedArabic})",
+                                            fontFamily = TajawalFontFamily,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                            fontSize = 13.sp,
+                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                        )
+                                    }
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Default.CheckCircle,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
                     }

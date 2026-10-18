@@ -76,4 +76,34 @@ class QuranApiClient {
             return@withContext null
         }
     }
+
+    suspend fun fetchAyahTranslation(
+        surahNumber: Int,
+        ayahNumber: Int,
+        languageCode: String
+    ): String? = withContext(Dispatchers.IO) {
+        try {
+            val edition = when (languageCode) {
+                "en" -> "en.sahih"
+                "fr" -> "fr.hamidullah"
+                "tr" -> "tr.diyanet"
+                "de" -> "de.bubenheim"
+                "ur" -> "ur.jalandhry"
+                else -> "en.sahih"
+            }
+            val url = "https://api.alquran.cloud/v1/ayah/$surahNumber:$ayahNumber/$edition"
+            val request = Request.Builder().url(url).build()
+            val response = client.newCall(request).execute()
+            if (!response.isSuccessful) return@withContext null
+            val body = response.body?.string() ?: return@withContext null
+            val json = JSONObject(body)
+            if (json.optInt("code") == 200) {
+                val data = json.getJSONObject("data")
+                return@withContext data.optString("text", null)
+            }
+            null
+        } catch (e: Exception) {
+            null
+        }
+    }
 }

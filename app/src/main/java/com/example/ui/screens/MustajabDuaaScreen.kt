@@ -609,7 +609,7 @@ private fun ShaarawyGemCard(gem: ShaarawyGem) {
             ) {
                 IconButton(
                     onClick = {
-                        val shareText = "${gem.situationTitle}\n${gem.sayingAyah}\nوالله تعالى يقول بعدها:\n${gem.responseAyah}\n[${gem.surahReference}]\n\nدرر الصالحين والشعراوي - تطبيق المصحف الرقمي"
+                        val shareText = "${gem.situationTitle}\n${gem.sayingAyah}\nوالله تعالى يقول بعدها:\n${gem.responseAyah}\n[${gem.surahReference}]\n\nدرر الصالحين والشعراوي - تطبيق الفرقان بلس | Al-Furqan Plus"
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         clipboard.setPrimaryClip(ClipData.newPlainText("Gem", shareText))
                         Toast.makeText(context, "تم نسخ الدرّة القرآنية", Toast.LENGTH_SHORT).show()
@@ -882,7 +882,7 @@ private fun DuaaCard(
             ) {
                 IconButton(
                     onClick = {
-                        val text = "$title\n$arabicText\n[$source]\n$merit\n\nتطبيق المصحف الرقمي"
+                        val text = "$title\n$arabicText\n[$source]\n$merit\n\nتطبيق الفرقان بلس | Al-Furqan Plus"
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         clipboard.setPrimaryClip(ClipData.newPlainText("Duaa", text))
                         Toast.makeText(context, "تم نسخ الذكر والدعاء", Toast.LENGTH_SHORT).show()

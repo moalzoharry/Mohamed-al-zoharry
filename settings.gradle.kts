@@ -22,6 +22,6 @@ dependencyResolutionManagement {
   }
 }
 
-rootProject.name = "AlMushaf"
+rootProject.name = "Al-Furqan Plus"
 
 include(":app")

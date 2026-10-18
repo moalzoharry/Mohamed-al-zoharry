@@ -66,6 +66,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.NotificationsNone
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.collectAsState
+import com.example.ui.components.PeriodicDhikrReminderSheet
+import com.example.ui.viewmodel.QuranViewModel
 import com.example.adhkar.AdhkarCategory
 import com.example.adhkar.AdhkarData
 import com.example.adhkar.DhikrItem
@@ -80,10 +86,13 @@ import com.example.ui.theme.TajawalFontFamily
 fun AdhkarScreen(
     onBack: () -> Unit,
     initialCategory: AdhkarCategory = AdhkarCategory.MORNING,
+    viewModel: QuranViewModel? = null,
     modifier: Modifier = Modifier
 ) {
     BackHandler { onBack() }
     val context = LocalContext.current
+    var showPeriodicDhikrSheet by remember { mutableStateOf(false) }
+    val periodicDhikrSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val categories = AdhkarCategory.entries.toTypedArray()
     var selectedCategoryIndex by remember {

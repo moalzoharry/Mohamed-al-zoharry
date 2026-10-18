@@ -28,6 +28,8 @@ import androidx.compose.material.icons.filled.NotificationsNone
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.SystemUpdate
+import androidx.compose.material.icons.filled.VolunteerActivism
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -47,10 +49,13 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.ui.text.style.TextOverflow
 import com.example.ui.components.MuslimMunaUpcomingPrayerBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 import androidx.compose.material3.rememberModalBottomSheetState
 import com.example.ui.components.AudioBottomPlayer
+import com.example.ui.components.ContentProtectionWarningDialog
 import com.example.ui.components.DailyWirdCard
 import com.example.ui.components.DailyWirdReminderSheet
+import com.example.ui.components.PeriodicDhikrReminderSheet
 import com.example.ui.components.PrayerCountdownCard
 import com.example.ui.components.ReciterSelectionBottomSheet
 import androidx.compose.runtime.Composable
@@ -70,6 +75,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.example.data.model.JuzInfo
+import com.example.data.model.PeriodicDhikrReminder
 import com.example.data.repository.QuranStaticData
 import com.example.ui.components.SurahItemCard
 import com.example.ui.theme.AmiriFontFamily
@@ -91,15 +97,26 @@ fun HomeScreen(
     onNavigateToAdhkar: () -> Unit = {},
     onNavigateToTasbih: () -> Unit = {},
     onNavigateToMustajabDuaa: () -> Unit = {},
+    onNavigateToNamesOfAllah: () -> Unit = {},
+    onNavigateToShaarawyTafsir: () -> Unit = {},
+    onNavigateToMorningEveningWird: (isEvening: Boolean) -> Unit = {},
+    onNavigateToReverentRecitations: () -> Unit = {},
+    onNavigateToFridaySermon: () -> Unit = {},
+    onNavigateToCustomAdhans: () -> Unit = {},
+    onNavigateToHijriCalendar: () -> Unit = {},
+    onOpenDonationSheet: () -> Unit = {},
+    onCheckUpdates: () -> Unit = {},
     onOpenSettings: () -> Unit,
     onOpenAbout: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     val surahs = viewModel.allSurahs
+    var showProtectionDialog by remember { mutableStateOf(false) }
     val lastRead by viewModel.lastRead.collectAsState()
     val audioState by viewModel.audioPlayerState.collectAsState()
     val settings by viewModel.settings.collectAsState()
     val wirdReminder by viewModel.dailyWirdReminder.collectAsState()
+    val periodicDhikrReminder by viewModel.periodicDhikrReminder.collectAsState()
     val prayerSchedule by viewModel.prayerSchedule.collectAsState()
     var selectedTabIndex by remember { mutableIntStateOf(0) }
     var filterQuery by remember { mutableStateOf("") }
@@ -107,6 +124,8 @@ fun HomeScreen(
     val reciterSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showWirdSheet by remember { mutableStateOf(false) }
     val wirdSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    var showPeriodicDhikrSheet by remember { mutableStateOf(false) }
+    val periodicDhikrSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     val filteredSurahs = remember(surahs, filterQuery) {
         if (filterQuery.isBlank()) surahs
@@ -141,17 +160,17 @@ fun HomeScreen(
                         Spacer(modifier = Modifier.width(10.dp))
                         Column {
                             Text(
-                                text = "المصحف الرقمي",
+                                text = "الفرقان بلس | Al-Furqan Plus",
                                 fontFamily = TajawalFontFamily,
                                 fontWeight = FontWeight.Bold,
-                                fontSize = 19.sp,
+                                fontSize = 18.sp,
                                 color = MaterialTheme.colorScheme.onSurface,
                                 maxLines = 1,
                                 softWrap = false,
                                 overflow = TextOverflow.Ellipsis
                             )
                             Text(
-                                text = "تفسير الجلالين • التفسير الميسر",
+                                text = "القرآن الكريم • مواقيت وأذان • أدعية وأذكار",
                                 fontFamily = TajawalFontFamily,
                                 fontSize = 11.sp,
                                 color = MaterialTheme.colorScheme.primary,
@@ -205,6 +224,28 @@ fun HomeScreen(
                             imageVector = Icons.Default.Mosque,
                             contentDescription = "مواقيت الصلاة والأذان",
                             tint = QuranGold
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onOpenDonationSheet,
+                        modifier = Modifier.testTag("home_donation_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.VolunteerActivism,
+                            contentDescription = "المساهمة في الصدقة الجارية",
+                            tint = Color(0xFF22C55E)
+                        )
+                    }
+
+                    IconButton(
+                        onClick = onCheckUpdates,
+                        modifier = Modifier.testTag("home_check_updates_button")
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.SystemUpdate,
+                            contentDescription = "التحقق من التحديثات",
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
 
@@ -506,6 +547,224 @@ fun HomeScreen(
                                 testTag = "home_mustajab_duaa_tile"
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Row 3: أسماء الله الحسنى + خواطر وتفسير الشيخ الشعراوي
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IslamicQuickServiceTile(
+                                iconText = "✨",
+                                title = "أسماء الله الحسنى",
+                                subtitle = "الشرح والفوائد ٩٩",
+                                onClick = onNavigateToNamesOfAllah,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_names_of_allah_tile"
+                            )
+                            IslamicQuickServiceTile(
+                                iconText = "🎙️",
+                                title = "تفسير الشعراوي",
+                                subtitle = "خواطر إمام الدعاة",
+                                onClick = onNavigateToShaarawyTafsir,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_shaarawy_tile"
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Row 4: أوراد ١٠ص و ٥م (بصوت إسلام صبحي) + تلاوات خاشعة نادرة
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IslamicQuickServiceTile(
+                                iconText = "☀️",
+                                title = "أوراد ١٠ص و ٥م",
+                                subtitle = "إسلام صبحي والكرسي",
+                                onClick = {
+                                    val nowHour = java.util.Calendar.getInstance().get(java.util.Calendar.HOUR_OF_DAY)
+                                    val isEve = nowHour >= 14 // After 2 PM open Evening Wird
+                                    onNavigateToMorningEveningWird(isEve)
+                                },
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_wird_companion_tile"
+                            )
+                            IslamicQuickServiceTile(
+                                iconText = "🎧",
+                                title = "تلاوات نادرة وخاشعة",
+                                subtitle = "بث كبار القراء",
+                                onClick = onNavigateToReverentRecitations,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_reverent_recitations_tile"
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Row 5: تسجيل خطبة الجمعة + رفع وإدارة الأذان المتعدد
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IslamicQuickServiceTile(
+                                iconText = "🕌",
+                                title = "تسجيل خطبة الجمعة",
+                                subtitle = "حفظ بالهاتف أو الذاكرة",
+                                onClick = onNavigateToFridaySermon,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_friday_sermon_tile"
+                            )
+                            IslamicQuickServiceTile(
+                                iconText = "📢",
+                                title = "ملفات الأذان المخصصة",
+                                subtitle = "رفع وتخصيص لكل صلاة",
+                                onClick = onNavigateToCustomAdhans,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_custom_adhans_tile"
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Row 6: التقويم الهجري والمناسبات + الصدقة الجارية والدعم
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IslamicQuickServiceTile(
+                                iconText = "📅",
+                                title = "التقويم الهجري",
+                                subtitle = "الأيام البيض وسنن الصيام",
+                                onClick = onNavigateToHijriCalendar,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_hijri_calendar_tile"
+                            )
+                            IslamicQuickServiceTile(
+                                iconText = "💚",
+                                title = "الصدقة الجارية",
+                                subtitle = "دعم التطبيق والنشر",
+                                onClick = onOpenDonationSheet,
+                                modifier = Modifier.weight(1f),
+                                testTag = "home_donation_tile"
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // الدرع الأمني لحماية النص القرآني والأذكار ضد التعديل أو الحذف
+                        Surface(
+                            shape = RoundedCornerShape(12.dp),
+                            color = IslamicGreen.copy(alpha = 0.08f),
+                            border = androidx.compose.foundation.BorderStroke(1.dp, IslamicGreen.copy(alpha = 0.3f)),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showProtectionDialog = true }
+                                .testTag("home_integrity_shield_bar")
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Icon(
+                                        imageVector = Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = IslamicGreen,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(
+                                        text = "🔒 نظام حماية النص الشريف مفعّل: المصحف والأذكار محمية برمجياً ضد التعديل أو الحذف",
+                                        fontFamily = TajawalFontFamily,
+                                        fontSize = 11.sp,
+                                        color = IslamicGreen
+                                    )
+                                }
+                                Text(
+                                    text = "تفاصيل الحماية ℹ",
+                                    fontFamily = TajawalFontFamily,
+                                    fontSize = 10.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = IslamicGreen
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        // Periodic Dhikr Reminder Dedicated Row
+                        Surface(
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (periodicDhikrReminder.isEnabled) IslamicGreen.copy(alpha = 0.12f) else QuranGold.copy(alpha = 0.12f),
+                            border = CardDefaults.outlinedCardBorder().copy(
+                                brush = androidx.compose.ui.graphics.SolidColor(if (periodicDhikrReminder.isEnabled) IslamicGreen else QuranGold.copy(alpha = 0.4f))
+                            ),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { showPeriodicDhikrSheet = true }
+                                .testTag("home_periodic_dhikr_banner")
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 12.dp, vertical = 10.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                                    Text(text = "📿", fontSize = 22.sp)
+                                    Spacer(modifier = Modifier.width(10.dp))
+                                    Column {
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Text(
+                                                text = "منبه الأذكار والصلاة على النبي ﷺ",
+                                                fontFamily = TajawalFontFamily,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 13.sp,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            )
+                                            Spacer(modifier = Modifier.width(6.dp))
+                                            Surface(
+                                                shape = RoundedCornerShape(6.dp),
+                                                color = if (periodicDhikrReminder.isEnabled) IslamicGreen else MaterialTheme.colorScheme.surfaceVariant
+                                            ) {
+                                                Text(
+                                                    text = if (periodicDhikrReminder.isEnabled) "مفعّل" else "ضبط ⚙",
+                                                    fontFamily = TajawalFontFamily,
+                                                    fontSize = 10.sp,
+                                                    fontWeight = FontWeight.Bold,
+                                                    color = if (periodicDhikrReminder.isEnabled) Color.White else MaterialTheme.colorScheme.onSurfaceVariant,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = if (periodicDhikrReminder.isEnabled)
+                                                "يتكرر: ${periodicDhikrReminder.formatIntervalArabic()} • «${periodicDhikrReminder.selectedDhikrText.take(24)}...»"
+                                            else
+                                                "تنبيه دوري تلقائي كل 5 دقائق أو مدة مخصصة بالذكر الذي تحبه",
+                                            fontFamily = TajawalFontFamily,
+                                            fontSize = 11.sp,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                }
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                    contentDescription = null,
+                                    tint = if (periodicDhikrReminder.isEnabled) IslamicGreen else QuranGold,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -725,6 +984,28 @@ fun HomeScreen(
                 onTestNotification = {
                     viewModel.testDailyWirdNotification()
                 }
+            )
+        }
+
+        if (showPeriodicDhikrSheet) {
+            PeriodicDhikrReminderSheet(
+                reminder = periodicDhikrReminder,
+                sheetState = periodicDhikrSheetState,
+                onDismissRequest = { showPeriodicDhikrSheet = false },
+                onSaveReminder = { updatedReminder ->
+                    viewModel.updatePeriodicDhikrReminder(updatedReminder)
+                    showPeriodicDhikrSheet = false
+                },
+                onTestNotification = {
+                    viewModel.testPeriodicDhikrNotification()
+                }
+            )
+        }
+
+        if (showProtectionDialog) {
+            ContentProtectionWarningDialog(
+                onDismissRequest = { showProtectionDialog = false },
+                targetItemName = "القرآن الكريم والأذكار النبوية"
             )
         }
     }

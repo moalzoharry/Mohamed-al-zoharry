@@ -73,6 +73,8 @@ import com.example.data.model.ReadingMode
 import com.example.ui.components.AudioBottomPlayer
 import com.example.ui.components.AyahItemCard
 import com.example.ui.components.BasmalahHeader
+import com.example.ui.components.ContentProtectionBadge
+import com.example.ui.components.ContentProtectionWarningDialog
 import com.example.ui.components.ReadingSettingsBottomSheet
 import com.example.ui.components.ReciterSelectionBottomSheet
 import com.example.ui.components.SurahBanner
@@ -113,6 +115,7 @@ fun SurahReaderScreen(
 
     var showSettingsSheet by remember { mutableStateOf(false) }
     var showReciterSheet by remember { mutableStateOf(false) }
+    var showProtectionDialog by remember { mutableStateOf(false) }
     val settingsSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val reciterSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val tafsirSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -215,6 +218,11 @@ fun SurahReaderScreen(
                             tint = textColor
                         )
                     }
+
+                    ContentProtectionBadge(
+                        onClick = { showProtectionDialog = true },
+                        modifier = Modifier.padding(end = 4.dp)
+                    )
 
                     IconButton(
                         onClick = { showSettingsSheet = true },
@@ -504,6 +512,13 @@ fun SurahReaderScreen(
             sheetState = reciterSheetState,
             onReciterSelected = { reciter -> viewModel.changeReciter(reciter) },
             onDismissRequest = { showReciterSheet = false }
+        )
+    }
+
+    if (showProtectionDialog) {
+        ContentProtectionWarningDialog(
+            onDismissRequest = { showProtectionDialog = false },
+            targetItemName = "المصحف الشريف والآيات الكريمة"
         )
     }
 }

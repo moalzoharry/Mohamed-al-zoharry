@@ -73,12 +73,17 @@ fun TafsirModalBottomSheet(
     onFontSizeChange: (Float) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    val context = LocalContext.current
     var selectedTabIndex by remember {
-        mutableIntStateOf(if (settings.selectedTafsir == TafsirSource.JALALAYN) 0 else 1)
+        mutableIntStateOf(
+            when (settings.selectedTafsir) {
+                TafsirSource.JALALAYN -> 0
+                TafsirSource.MUYASSAR -> 1
+                TafsirSource.SHAARAWI -> 2
+            }
+        )
     }
 
-    val tabs = listOf("تفسير الجلالين", "التفسير الميسر", "مقارنة التفسيرين")
+    val tabs = listOf("تفسير الجلالين", "التفسير الميسر", "خواطر الشعراوي", "مقارنة شاملة")
 
     ModalBottomSheet(
         onDismissRequest = onDismissRequest,
@@ -203,6 +208,9 @@ fun TafsirModalBottomSheet(
             Spacer(modifier = Modifier.height(14.dp))
 
             // Tab Content
+            val shaarawiContent = ayah.tafsirShaarawi 
+                ?: com.example.data.model.ShaarawyTafsirData.getGeneralReflectionForAyah(ayah.surahNumber, ayah.ayahNumber)
+
             when (selectedTabIndex) {
                 0 -> {
                     // Tafsir Al-Jalalayn
@@ -225,7 +233,17 @@ fun TafsirModalBottomSheet(
                     )
                 }
                 2 -> {
-                    // Comparison (both stacked)
+                    // Sheikh Al-Sha'rawi
+                    TafsirCardItem(
+                        source = TafsirSource.SHAARAWI,
+                        content = shaarawiContent,
+                        fontSize = settings.tafsirFontSize,
+                        surahName = surahName,
+                        ayahNumber = ayah.ayahNumber
+                    )
+                }
+                3 -> {
+                    // All three stacked for full comparison
                     Column {
                         TafsirCardItem(
                             source = TafsirSource.JALALAYN,
@@ -238,6 +256,14 @@ fun TafsirModalBottomSheet(
                         TafsirCardItem(
                             source = TafsirSource.MUYASSAR,
                             content = ayah.tafsirMuyassar,
+                            fontSize = settings.tafsirFontSize,
+                            surahName = surahName,
+                            ayahNumber = ayah.ayahNumber
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        TafsirCardItem(
+                            source = TafsirSource.SHAARAWI,
+                            content = shaarawiContent,
                             fontSize = settings.tafsirFontSize,
                             surahName = surahName,
                             ayahNumber = ayah.ayahNumber
@@ -261,7 +287,11 @@ fun TafsirCardItem(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    val accentColor = if (source == TafsirSource.JALALAYN) QuranGold else IslamicGreen
+    val accentColor = when (source) {
+        TafsirSource.JALALAYN -> QuranGold
+        TafsirSource.MUYASSAR -> IslamicGreen
+        TafsirSource.SHAARAWI -> androidx.compose.ui.graphics.Color(0xFF0284C7) // Celestial Sky Blue for Sha'rawi
+    }
 
     Card(
         modifier = modifier.fillMaxWidth(),

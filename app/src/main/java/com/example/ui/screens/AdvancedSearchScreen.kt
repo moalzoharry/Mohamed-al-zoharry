@@ -389,6 +389,7 @@ fun SearchResultItemCard(
                     MatchType.QURAN -> Pair(IslamicGreen.copy(alpha = 0.15f), IslamicGreen)
                     MatchType.JALALAYN -> Pair(QuranGold.copy(alpha = 0.2f), QuranGold)
                     MatchType.MUYASSAR -> Pair(Color(0xFF2563EB).copy(alpha = 0.15f), Color(0xFF1D4ED8))
+                    MatchType.SHAARAWI -> Pair(Color(0xFF0284C7).copy(alpha = 0.15f), Color(0xFF0284C7))
                 }
 
                 Surface(

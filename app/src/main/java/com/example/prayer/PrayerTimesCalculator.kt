@@ -128,18 +128,22 @@ object PrayerTimesCalculator {
         val time24 = String.format(Locale.US, "%02d:%02d", h, m)
 
         // 12-hour format in Arabic
-        val periodArabic = if (h < 12) "ص" else "م"
+        val periodShort = if (h < 12) "ص" else "م"
+        val periodLong = if (h < 12) "صباحاً" else "مساءً"
         val hour12 = when {
             h == 0 -> 12
             h > 12 -> h - 12
             else -> h
         }
-        val time12 = String.format(Locale.US, "%d:%02d %s", hour12, m, periodArabic)
+        val time12 = String.format(Locale.US, "%d:%02d %s", hour12, m, periodShort)
+        val time12Long = String.format(Locale.US, "%d:%02d %s", hour12, m, periodLong)
 
         return PrayerRawTime(
             hour24 = h,
             minute = m,
             formatted12h = time12,
+            formatted12hLong = time12Long,
+            periodArabic = periodLong,
             formatted24h = time24,
             timestampMillis = cal.timeInMillis
         )
@@ -203,6 +207,8 @@ data class PrayerRawTime(
     val hour24: Int,
     val minute: Int,
     val formatted12h: String,
+    val formatted12hLong: String = "",
+    val periodArabic: String = "",
     val formatted24h: String,
     val timestampMillis: Long
 )

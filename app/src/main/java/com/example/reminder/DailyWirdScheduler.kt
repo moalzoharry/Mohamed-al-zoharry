@@ -167,21 +167,22 @@ object DailyWirdScheduler {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
+        val lang = com.example.util.LocalizationManager.getSavedLanguage(context)
+        val notificationId = if (isTest) TEST_NOTIFICATION_ID else NOTIFICATION_ID
+
         // Check if Friday and Kahf reminder applies
         val isFriday = Calendar.getInstance().get(Calendar.DAY_OF_WEEK) == Calendar.FRIDAY
         val titleText = if (isTest) {
             "🔔 اختبار منبه الورد القرآني"
-        } else if (isFriday && reminder.remindOnFridaySurahKahf) {
-            "🕌 الجمعة مباركة: سورة الكهف والورد اليومي"
         } else {
-            "📖 موعد الورد القرآني اليومي"
+            com.example.util.LocalizationManager.getDailyWirdTitle(lang, isFriday)
         }
 
-        val goalDescription = "الهدف المخصص: ${reminder.wirdGoalType.titleArabic}"
+        val goalDescription = "الهدف: ${reminder.wirdGoalType.titleArabic}"
         val bodyText = if (isTest) {
             "تنبيه تجريبي ناجح! سيصلك الإشعار يومياً في تمام الساعة ${reminder.formatTimeArabic()}."
         } else {
-            reminder.customMessage
+            reminder.customMessage.ifBlank { com.example.util.LocalizationManager.getDailyWirdBody(lang) }
         }
 
         val bigTextContent = buildString {
@@ -190,6 +191,42 @@ object DailyWirdScheduler {
             append("🎯 $goalDescription")
             append("\n✨ {أَلَا بِذِكْرِ اللَّهِ تَطْمَئِنُّ الْقُلُوبُ}")
         }
+
+        // Action 1: Done (تمّ)
+        val doneIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_DONE
+            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val donePendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId + 10,
+            doneIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Action 2: Dismiss (إغلاق التذكير)
+        val dismissIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_DISMISS
+            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val dismissPendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId + 20,
+            dismissIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
+
+        // Action 3: Settings (الإعدادات)
+        val settingsIntent = Intent(context, NotificationActionReceiver::class.java).apply {
+            action = NotificationActionReceiver.ACTION_SETTINGS
+            putExtra(NotificationActionReceiver.EXTRA_NOTIFICATION_ID, notificationId)
+        }
+        val settingsPendingIntent = PendingIntent.getBroadcast(
+            context,
+            notificationId + 30,
+            settingsIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+        )
 
         val defaultSound = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_NOTIFICATION)
 
@@ -202,9 +239,19 @@ object DailyWirdScheduler {
             .setContentIntent(contentPendingIntent)
             .setAutoCancel(true)
             .addAction(
-                android.R.drawable.ic_menu_agenda,
-                "ابدأ القراءة الآن ➔",
-                contentPendingIntent
+                android.R.drawable.checkbox_on_background,
+                com.example.util.LocalizationManager.getActionDone(lang),
+                donePendingIntent
+            )
+            .addAction(
+                android.R.drawable.ic_menu_close_clear_cancel,
+                com.example.util.LocalizationManager.getActionDismiss(lang),
+                dismissPendingIntent
+            )
+            .addAction(
+                android.R.drawable.ic_menu_preferences,
+                com.example.util.LocalizationManager.getActionSettings(lang),
+                settingsPendingIntent
             )
 
         if (reminder.soundEnabled) {
@@ -214,7 +261,6 @@ object DailyWirdScheduler {
             builder.setVibrate(longArrayOf(0, 300, 200, 300))
         }
 
-        val notificationId = if (isTest) TEST_NOTIFICATION_ID else NOTIFICATION_ID
         try {
             val manager = NotificationManagerCompat.from(context)
             manager.notify(notificationId, builder.build())

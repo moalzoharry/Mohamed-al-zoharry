@@ -88,6 +88,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import android.widget.Toast
+import androidx.compose.material.icons.filled.GpsFixed
+import androidx.compose.runtime.rememberCoroutineScope
+import com.example.prayer.LocationDetectionResult
+import com.example.prayer.LocationHelper
+import kotlinx.coroutines.launch
 import com.example.prayer.AdhanAlertMode
 import com.example.prayer.AdhanMuezzin
 import com.example.prayer.CalculationMethod
@@ -109,11 +115,13 @@ fun PrayerTimesScreen(
     onBack: () -> Unit,
     onNavigateToQibla: () -> Unit = {},
     onNavigateToAdhkar: () -> Unit = {},
+    onNavigateToCustomAdhans: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
     BackHandler { onBack() }
 
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val schedule by viewModel.prayerSchedule.collectAsState()
     val selectedCity by viewModel.selectedCity.collectAsState()
     val selectedMethod by viewModel.selectedCalculationMethod.collectAsState()
@@ -131,6 +139,35 @@ fun PrayerTimesScreen(
     var showMethodSheet by remember { mutableStateOf(false) }
     val methodSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
+    var isDetectingLocation by remember { mutableStateOf(false) }
+
+    val executeGpsDetection: () -> Unit = {
+        isDetectingLocation = true
+        coroutineScope.launch {
+            when (val result = LocationHelper.detectCurrentLocation(context)) {
+                is LocationDetectionResult.Success -> {
+                    viewModel.setAutoGpsLocation(
+                        lat = result.latitude,
+                        lng = result.longitude,
+                        cityName = result.cityName,
+                        countryName = result.countryName,
+                        timeZoneId = result.timeZoneId,
+                        method = result.recommendedMethod
+                    )
+                    Toast.makeText(
+                        context,
+                        "تم ضبط الموقع بنجاح: ${result.cityName} (${result.countryName}) وتحديث مواقيت الصلاة والأذان تلقائياً",
+                        Toast.LENGTH_LONG
+                    ).show()
+                }
+                is LocationDetectionResult.Error -> {
+                    Toast.makeText(context, result.messageArabic, Toast.LENGTH_LONG).show()
+                }
+            }
+            isDetectingLocation = false
+        }
+    }
+
     // Permission launcher for GPS
     val locationPermissionLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.RequestMultiplePermissions()
@@ -138,9 +175,22 @@ fun PrayerTimesScreen(
         val fineGranted = permissions[Manifest.permission.ACCESS_FINE_LOCATION] == true
         val coarseGranted = permissions[Manifest.permission.ACCESS_COARSE_LOCATION] == true
         if (fineGranted || coarseGranted) {
-            detectCurrentLocation(context) { lat, lng, cityName ->
-                viewModel.setCustomLocation(cityName, "موقعي الحالي", lat, lng)
-            }
+            executeGpsDetection()
+        } else {
+            Toast.makeText(context, "يرجى منح إذن الموقع لتحديد مواقيت الصلاة تلقائياً بدقة", Toast.LENGTH_LONG).show()
+        }
+    }
+
+    val triggerGpsLocationDetection: () -> Unit = {
+        if (LocationHelper.hasLocationPermission(context)) {
+            executeGpsDetection()
+        } else {
+            locationPermissionLauncher.launch(
+                arrayOf(
+                    Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION
+                )
+            )
         }
     }
 
@@ -207,7 +257,10 @@ fun PrayerTimesScreen(
             item {
                 PrayerHeroCard(
                     schedule = schedule,
+                    selectedCity = selectedCity,
                     selectedMuezzin = selectedMuezzin,
+                    isDetectingLocation = isDetectingLocation,
+                    onAutoGpsClick = triggerGpsLocationDetection,
                     onChangeCityClick = { showCitySheet = true },
                     onChangeMuezzinClick = { showMuezzinSheet = true }
                 )
@@ -430,6 +483,11 @@ fun PrayerTimesScreen(
                 onClearCustomMuezzin = {
                     viewModel.clearCustomMuezzin()
                 },
+                onOpenMultiAdhanManager = {
+                    viewModel.stopAdhanPreview()
+                    showMuezzinSheet = false
+                    onNavigateToCustomAdhans()
+                },
                 onDismiss = {
                     viewModel.stopAdhanPreview()
                     showMuezzinSheet = false
@@ -452,12 +510,7 @@ fun PrayerTimesScreen(
                 },
                 onUseGps = {
                     showCitySheet = false
-                    locationPermissionLauncher.launch(
-                        arrayOf(
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION
-                        )
-                    )
+                    triggerGpsLocationDetection()
                 },
                 onDismiss = { showCitySheet = false }
             )
@@ -487,7 +540,10 @@ fun PrayerTimesScreen(
 @Composable
 fun PrayerHeroCard(
     schedule: PrayerSchedule,
+    selectedCity: CityPreset,
     selectedMuezzin: AdhanMuezzin,
+    isDetectingLocation: Boolean,
+    onAutoGpsClick: () -> Unit,
     onChangeCityClick: () -> Unit,
     onChangeMuezzinClick: () -> Unit,
     modifier: Modifier = Modifier
@@ -533,9 +589,9 @@ fun PrayerHeroCard(
                             modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp)
                         ) {
                             Icon(
-                                imageVector = Icons.Default.LocationOn,
+                                imageVector = if (selectedCity.isAutoGps) Icons.Default.GpsFixed else Icons.Default.LocationOn,
                                 contentDescription = null,
-                                tint = QuranGold,
+                                tint = if (selectedCity.isAutoGps) Color(0xFF4ADE80) else QuranGold,
                                 modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(6.dp))
@@ -608,7 +664,7 @@ fun PrayerHeroCard(
                     Spacer(modifier = Modifier.height(10.dp))
 
                     Text(
-                        text = nextPrayer?.timeFormatted12h ?: "--:--",
+                        text = nextPrayer?.let { if (it.timeFormattedLong.isNotEmpty()) it.timeFormattedLong else it.timeFormatted12h } ?: "--:--",
                         fontFamily = TajawalFontFamily,
                         fontWeight = FontWeight.Bold,
                         fontSize = 32.sp,
@@ -656,6 +712,78 @@ fun PrayerHeroCard(
                     color = QuranGold,
                     trackColor = Color.White.copy(alpha = 0.2f),
                 )
+
+                Spacer(modifier = Modifier.height(14.dp))
+
+                // Auto-Location GPS Quick Action Bar
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = if (selectedCity.isAutoGps) Color.Black.copy(alpha = 0.35f) else QuranGold.copy(alpha = 0.22f),
+                    border = androidx.compose.foundation.BorderStroke(
+                        1.dp,
+                        if (selectedCity.isAutoGps) Color(0xFF4ADE80) else QuranGold
+                    ),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable(enabled = !isDetectingLocation, onClick = onAutoGpsClick)
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.weight(1f)
+                        ) {
+                            Icon(
+                                imageVector = if (selectedCity.isAutoGps) Icons.Default.GpsFixed else Icons.Default.MyLocation,
+                                contentDescription = null,
+                                tint = if (selectedCity.isAutoGps) Color(0xFF4ADE80) else QuranGold,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Column {
+                                Text(
+                                    text = if (selectedCity.isAutoGps) "الموقع مضبوط تلقائياً (GPS): ${selectedCity.nameArabic}" else "ضبط المكان تلقائياً حسب موقعك (GPS)",
+                                    fontFamily = TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 12.sp,
+                                    color = Color.White
+                                )
+                                Text(
+                                    text = if (selectedCity.isAutoGps) "مواقيت وأذان دقيقة 100% وفق إحداثياتك" else "اضغط لضبط المواقيت بدقة لمنع تقدم أو تأخر الأذان",
+                                    fontFamily = TajawalFontFamily,
+                                    fontSize = 10.sp,
+                                    color = Color.White.copy(alpha = 0.85f)
+                                )
+                            }
+                        }
+
+                        if (isDetectingLocation) {
+                            CircularProgressIndicator(
+                                color = QuranGold,
+                                modifier = Modifier.size(18.dp),
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = if (selectedCity.isAutoGps) Color(0xFF4ADE80).copy(alpha = 0.25f) else QuranGold,
+                                modifier = Modifier.padding(start = 6.dp)
+                            ) {
+                                Text(
+                                    text = if (selectedCity.isAutoGps) "تحديث GPS" else "تفعيل الآن",
+                                    fontFamily = TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 11.sp,
+                                    color = if (selectedCity.isAutoGps) Color.White else Color.Black,
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -861,10 +989,10 @@ fun PrayerItemRowCard(
             // Time & Alert toggle button
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
-                    text = item.timeFormatted12h,
+                    text = if (item.timeFormattedLong.isNotEmpty()) item.timeFormattedLong else item.timeFormatted12h,
                     fontFamily = TajawalFontFamily,
                     fontWeight = FontWeight.Bold,
-                    fontSize = 17.sp,
+                    fontSize = 16.sp,
                     color = if (isNext) IslamicGreen else MaterialTheme.colorScheme.onSurface
                 )
 
@@ -920,6 +1048,7 @@ fun MuezzinSelectionSheetContent(
     onTogglePlayPreview: (AdhanMuezzin) -> Unit,
     onTogglePlayCustomPreview: () -> Unit,
     onClearCustomMuezzin: () -> Unit,
+    onOpenMultiAdhanManager: () -> Unit = {},
     onDismiss: () -> Unit
 ) {
     val context = androidx.compose.ui.platform.LocalContext.current
@@ -1147,6 +1276,61 @@ fun MuezzinSelectionSheetContent(
                                     modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
                                 )
                             }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Custom Adhans multi-slot management card
+                Surface(
+                    shape = RoundedCornerShape(14.dp),
+                    color = QuranGold.copy(alpha = 0.12f),
+                    border = CardDefaults.outlinedCardBorder(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
+                        .clickable { onOpenMultiAdhanManager() }
+                        .testTag("open_multi_adhan_manager_card")
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(12.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.weight(1f)) {
+                            Text("📢", fontSize = 20.sp)
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Column {
+                                Text(
+                                    text = "إدارة عدة أذانات (تخصيص لكل صلاة)",
+                                    fontFamily = TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 13.sp,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Text(
+                                    text = "رفع أكثر من أذان وتعيين صوت مستقل للفجر، الظهر، العصر...",
+                                    fontFamily = TajawalFontFamily,
+                                    fontSize = 11.sp,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            }
+                        }
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = QuranGold
+                        ) {
+                            Text(
+                                text = "إدارة الأذان ➔",
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 11.sp,
+                                color = Color.White,
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                            )
                         }
                     }
                 }

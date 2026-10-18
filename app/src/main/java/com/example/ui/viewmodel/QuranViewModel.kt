@@ -10,6 +10,7 @@ import com.example.data.local.ReadingProgressEntity
 import com.example.data.model.AutoNightModeOption
 import com.example.data.model.Ayah
 import com.example.data.model.DailyWirdReminder
+import com.example.data.model.PeriodicDhikrReminder
 import com.example.data.model.ReadingSettings
 import com.example.data.model.ReadingTheme
 import com.example.data.model.SearchResult
@@ -19,6 +20,7 @@ import com.example.data.repository.QuranRepository
 import com.example.data.repository.QuranStaticData
 import com.example.data.repository.SearchFilter
 import com.example.reminder.DailyWirdScheduler
+import com.example.reminder.PeriodicDhikrScheduler
 import com.example.util.AutoNightModeSensorManager
 import com.example.prayer.AdhanAlertMode
 import com.example.prayer.AdhanMuezzin
@@ -46,6 +48,7 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
 
     val settings: StateFlow<ReadingSettings> = repository.settingsFlow
     val dailyWirdReminder: StateFlow<DailyWirdReminder> = repository.dailyWirdFlow
+    val periodicDhikrReminder: StateFlow<PeriodicDhikrReminder> = repository.periodicDhikrFlow
     val ambientLux: StateFlow<Float?> = autoNightSensorManager.ambientLux
 
     val prayerSchedule: StateFlow<PrayerSchedule> = prayerRepository.scheduleFlow
@@ -214,6 +217,21 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
         DailyWirdScheduler.showNotification(getApplication(), dailyWirdReminder.value, isTest = true)
     }
 
+    fun updatePeriodicDhikrReminder(newReminder: PeriodicDhikrReminder) {
+        repository.updatePeriodicDhikrReminder(newReminder)
+    }
+
+    fun togglePeriodicDhikrReminder(): Boolean {
+        val current = periodicDhikrReminder.value
+        val updated = current.copy(isEnabled = !current.isEnabled)
+        repository.updatePeriodicDhikrReminder(updated)
+        return updated.isEnabled
+    }
+
+    fun testPeriodicDhikrNotification() {
+        PeriodicDhikrScheduler.showNotification(getApplication(), periodicDhikrReminder.value, isTest = true)
+    }
+
     fun loadSurah(surahNumber: Int, targetAyahNumber: Int? = null) {
         val surahInfo = QuranStaticData.getSurah(surahNumber) ?: return
         _currentSurah.value = surahInfo
@@ -363,6 +381,17 @@ class QuranViewModel(application: Application) : AndroidViewModel(application) {
 
     fun setCustomLocation(cityName: String, countryName: String, lat: Double, lng: Double) {
         prayerRepository.setCoordinates(cityName, countryName, lat, lng)
+    }
+
+    fun setAutoGpsLocation(
+        lat: Double,
+        lng: Double,
+        cityName: String,
+        countryName: String,
+        timeZoneId: String,
+        method: CalculationMethod? = null
+    ) {
+        prayerRepository.setAutoGpsLocation(lat, lng, cityName, countryName, timeZoneId, method)
     }
 
     fun selectCalculationMethod(method: CalculationMethod) {

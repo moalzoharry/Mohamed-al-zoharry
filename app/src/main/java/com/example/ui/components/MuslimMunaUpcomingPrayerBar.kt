@@ -147,7 +147,7 @@ fun MuslimMunaUpcomingPrayerBar(
                         }
 
                         Text(
-                            text = "موعد الأذان: ${nextPrayer.timeFormatted12h}",
+                            text = "موعد الأذان: ${if (nextPrayer.timeFormattedLong.isNotEmpty()) nextPrayer.timeFormattedLong else nextPrayer.timeFormatted12h}",
                             fontFamily = TajawalFontFamily,
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurfaceVariant

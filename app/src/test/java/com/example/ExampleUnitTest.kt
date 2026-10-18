@@ -66,4 +66,31 @@ class ExampleUnitTest {
 
         assertEquals(4, com.example.data.model.AutoNightModeOption.values().size)
     }
+
+    @Test
+    fun testCairoPrayerTimesMaghribIsEvening() {
+        val cairoCal = java.util.Calendar.getInstance(java.util.TimeZone.getTimeZone("Africa/Cairo"))
+        val times = com.example.prayer.PrayerTimesCalculator.calculate(
+            latitude = 30.0444,
+            longitude = 31.2357,
+            calendar = cairoCal,
+            method = com.example.prayer.CalculationMethod.EGYPTIAN
+        )
+        val maghrib = times[com.example.prayer.PrayerType.MAGHRIB]
+        assertNotNull(maghrib)
+        assertEquals("مساءً", maghrib?.periodArabic)
+        assertTrue("Maghrib must be evening hour (17 or 18), was ${maghrib?.hour24}", maghrib?.hour24 ?: 0 in 17..19)
+        assertTrue(maghrib?.formatted12hLong?.contains("مساءً") == true)
+        assertFalse(maghrib?.formatted12hLong?.contains("صباحاً") == true)
+    }
+
+    @Test
+    fun testSermonAudioQualityPresets() {
+        val qualities = com.example.sermon.SermonAudioQuality.values()
+        assertEquals(3, qualities.size)
+        val recommended = qualities.first { it.isRecommended }
+        assertEquals(com.example.sermon.SermonAudioQuality.HIGH_EFFICIENCY_AAC, recommended)
+        assertEquals(64000, recommended.bitRate)
+        assertEquals("m4a", recommended.formatExtension)
+    }
 }
