@@ -22,13 +22,18 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import android.content.ClipData
+import android.content.ClipboardManager
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.CardGiftcard
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.PhoneAndroid
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.VolunteerActivism
+import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -298,40 +303,192 @@ fun DonationSadaqahSheet(
 
             Spacer(modifier = Modifier.height(18.dp))
 
-            // Primary action button (Google Play In-App Billing or Support confirmation)
-            Button(
-                onClick = {
-                    Toast.makeText(
-                        context,
-                        if (selectedLang == DonationLanguage.ARABIC)
-                            "تقبل الله منا ومنكم صالح الأعمال وجعلها صدقة جارية في ميزان حسناتكم"
-                        else
-                            "May Allah accept your good deeds and grant you continuous rewards",
-                        Toast.LENGTH_LONG
-                    ).show()
-                    onDismiss()
-                },
-                colors = ButtonDefaults.buttonColors(containerColor = IslamicGreen),
-                shape = RoundedCornerShape(14.dp),
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(48.dp)
+            // EGYPT MOBILE CASH WALLETS SECTION (01206784668 & 01551982611)
+            Card(
+                shape = RoundedCornerShape(16.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = IslamicGreen.copy(alpha = 0.08f)
+                ),
+                border = androidx.compose.foundation.BorderStroke(1.dp, IslamicGreen.copy(alpha = 0.35f)),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Icon(imageVector = Icons.Default.VolunteerActivism, contentDescription = null, tint = Color.White)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = when (selectedLang) {
-                        DonationLanguage.ARABIC -> "المساهمة الآن (وفق متجر جوجل الرسمي)"
-                        DonationLanguage.ENGLISH -> "Contribute Now (via Google Play)"
-                        DonationLanguage.FRENCH -> "Contribuer maintenant"
-                        DonationLanguage.URDU -> "ابھی تعاون کریں"
-                        DonationLanguage.INDONESIAN -> "Berkontribusi Sekarang"
-                    },
-                    fontFamily = TajawalFontFamily,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 13.sp,
-                    color = Color.White
-                )
+                Column(modifier = Modifier.padding(14.dp)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = IslamicGreen.copy(alpha = 0.15f),
+                            modifier = Modifier.size(36.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Default.AccountBalanceWallet,
+                                    contentDescription = null,
+                                    tint = IslamicGreen,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Column {
+                            Text(
+                                text = "المساهمة عبر المحافظ الإلكترونية (كاش)",
+                                fontFamily = TajawalFontFamily,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Text(
+                                text = "متاح التحويل من أي محفظة (Vodafone / Orange / WE / InstaPay)",
+                                fontFamily = TajawalFontFamily,
+                                fontSize = 11.sp,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // Wallet 1: Orange Cash
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = CardDefaults.outlinedCardBorder(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = "🟠", fontSize = 12.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "محفظة أورانج كاش (Orange Cash):",
+                                        fontFamily = TajawalFontFamily,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "01206784668",
+                                    fontFamily = TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color(0xFFEA580C)
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Orange Cash", "01206784668")
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "تم نسخ رقم محفظة أورانج كاش (01206784668) بنجاح ✨", Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFEA580C)),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ContentCopy,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "نسخ الرقم",
+                                    fontFamily = TajawalFontFamily,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(8.dp))
+
+                    // Wallet 2: Vodafone Cash / WE
+                    Surface(
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.surface,
+                        border = CardDefaults.outlinedCardBorder(),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 12.dp, vertical = 10.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Column {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(text = "🔴", fontSize = 12.sp)
+                                    Spacer(modifier = Modifier.width(4.dp))
+                                    Text(
+                                        text = "محفظة فودافون كاش / وي (Vodafone / WE):",
+                                        fontFamily = TajawalFontFamily,
+                                        fontWeight = FontWeight.Medium,
+                                        fontSize = 11.sp,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                }
+                                Text(
+                                    text = "01551982611",
+                                    fontFamily = TajawalFontFamily,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 16.sp,
+                                    color = Color(0xFFDC2626)
+                                )
+                            }
+
+                            Button(
+                                onClick = {
+                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                    val clip = ClipData.newPlainText("Vodafone Cash", "01551982611")
+                                    clipboard.setPrimaryClip(clip)
+                                    Toast.makeText(context, "تم نسخ رقم المحفظة (01551982611) بنجاح ✨", Toast.LENGTH_SHORT).show()
+                                },
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFDC2626)),
+                                contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Outlined.ContentCopy,
+                                    contentDescription = null,
+                                    tint = Color.White,
+                                    modifier = Modifier.size(14.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = "نسخ الرقم",
+                                    fontFamily = TajawalFontFamily,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color.White
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+
+                    Text(
+                        text = "جزاكم الله خيراً، تُخصص المساهمات لتغطية تكاليف الخوادم وتطوير المصحف، تقبل الله منا ومنكم صالح الأعمال.",
+                        fontFamily = TajawalFontFamily,
+                        fontSize = 10.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth()
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(10.dp))
