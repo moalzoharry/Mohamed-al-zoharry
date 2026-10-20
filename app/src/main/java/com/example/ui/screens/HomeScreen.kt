@@ -82,6 +82,13 @@ import com.example.ui.theme.AmiriFontFamily
 import com.example.ui.theme.IslamicGreen
 import com.example.ui.theme.QuranGold
 import com.example.ui.theme.TajawalFontFamily
+import android.content.Context
+import androidx.compose.foundation.Image
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import com.example.ui.viewmodel.QuranViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -104,6 +111,7 @@ fun HomeScreen(
     onNavigateToFridaySermon: () -> Unit = {},
     onNavigateToCustomAdhans: () -> Unit = {},
     onNavigateToHijriCalendar: () -> Unit = {},
+    onNavigateToIslamicHeritage: () -> Unit = {},
     onOpenDonationSheet: () -> Unit = {},
     onCheckUpdates: () -> Unit = {},
     onOpenSettings: () -> Unit,
@@ -289,11 +297,34 @@ fun HomeScreen(
         },
         modifier = modifier.testTag("home_screen")
     ) { paddingValues ->
-        LazyColumn(
+        val context = LocalContext.current
+        val wallpaperPrefs = remember { context.getSharedPreferences("islamic_wallpaper_prefs", Context.MODE_PRIVATE) }
+        val presetWpId = wallpaperPrefs.getString("preset_wallpaper_id", null)
+
+        Box(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
         ) {
+            val bgRes = when (presetWpId) {
+                "wp_kaaba_gold" -> R.drawable.islamic_wallpaper_kaaba
+                "wp_madina_glow" -> R.drawable.islamic_wallpaper_madina
+                "wp_museum_relics" -> R.drawable.islamic_museum_banner
+                else -> null
+            }
+            if (bgRes != null) {
+                Image(
+                    painter = painterResource(id = bgRes),
+                    contentDescription = null,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .alpha(0.06f)
+                )
+            }
+            LazyColumn(
+                modifier = Modifier.fillMaxSize()
+            ) {
             // 0. INTRODUCTORY CARD: DEDICATION & PRAYER FOR LIVING AND DECEASED MUSLIMS & RECITING AL-FATIHAH
             item {
                 Card(
@@ -652,6 +683,18 @@ fun HomeScreen(
                             )
                         }
 
+                        Spacer(modifier = Modifier.height(8.dp))
+
+                        // Row 7: المتحف والتراث الإسلامي الشامل
+                        IslamicQuickServiceTile(
+                            iconText = "🏛️",
+                            title = "المتحف والتراث الإسلامي الشامل",
+                            subtitle = "الآثار النبوية الشريفة • فرسان الصحابة • محراب الخلفيات",
+                            onClick = onNavigateToIslamicHeritage,
+                            modifier = Modifier.fillMaxWidth(),
+                            testTag = "home_islamic_heritage_tile"
+                        )
+
                         Spacer(modifier = Modifier.height(10.dp))
 
                         // الدرع الأمني لحماية النص القرآني والأذكار ضد التعديل أو الحذف
@@ -962,6 +1005,7 @@ fun HomeScreen(
                 Spacer(modifier = Modifier.height(40.dp))
             }
         }
+    }
 
         if (showReciterSheet) {
             ReciterSelectionBottomSheet(

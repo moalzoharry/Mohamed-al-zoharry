@@ -81,6 +81,7 @@ import kotlinx.coroutines.launch
 fun AboutAppBottomSheet(
     sheetState: SheetState,
     onDismissRequest: () -> Unit,
+    onOpenOnboarding: (() -> Unit)? = null,
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
@@ -476,7 +477,36 @@ fun AboutAppBottomSheet(
                 }
             }
 
-            Spacer(modifier = Modifier.height(18.dp))
+            Spacer(modifier = Modifier.height(14.dp))
+
+            onOpenOnboarding?.let { openTour ->
+                OutlinedButton(
+                    onClick = {
+                        onDismissRequest()
+                        openTour()
+                    },
+                    shape = RoundedCornerShape(14.dp),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = QuranGold
+                    ),
+                    border = androidx.compose.foundation.BorderStroke(1.dp, QuranGold.copy(alpha = 0.5f)),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(48.dp)
+                        .testTag("open_onboarding_tour_button")
+                ) {
+                    Icon(imageVector = Icons.Default.Star, contentDescription = null, tint = QuranGold, modifier = Modifier.size(18.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "عرض جولة التعريف بالتطبيق 🌟 (صفحة الترحيب)",
+                        fontFamily = TajawalFontFamily,
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurface
+                    )
+                }
+                Spacer(modifier = Modifier.height(14.dp))
+            }
 
             // 4. LANGUAGE SETTINGS (لغات إعدادات البرنامج: إنجليزي، فرنسي، تركي، ألماني، عربي)
             var currentLanguage by remember { mutableStateOf(LocalizationManager.getSavedLanguage(context)) }

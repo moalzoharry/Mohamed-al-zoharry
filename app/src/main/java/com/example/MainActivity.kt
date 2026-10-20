@@ -37,11 +37,14 @@ import com.example.ui.screens.ReverentRecitationsScreen
 import com.example.ui.screens.ShaarawyTafsirScreen
 import com.example.ui.screens.CustomAdhansScreen
 import com.example.ui.screens.FridaySermonScreen
+import android.content.Context
 import com.example.ui.screens.PrayerTimesScreen
 import com.example.ui.screens.QiblaCompassScreen
 import com.example.ui.screens.SurahReaderScreen
 import com.example.ui.screens.TasbihScreen
 import com.example.ui.screens.SplashScreen
+import com.example.ui.screens.IslamicHeritageScreen
+import com.example.ui.screens.OnboardingScreen
 import com.example.ui.screens.HijriCalendarScreen
 import com.example.ui.components.DonationSadaqahSheet
 import com.example.ui.components.AppUpdateDialog
@@ -51,6 +54,7 @@ import com.example.ui.viewmodel.QuranViewModel
 
 sealed interface QuranScreen {
     object Splash : QuranScreen
+    object Onboarding : QuranScreen
     object Home : QuranScreen
     data class Reader(val surahNumber: Int, val initialAyah: Int = 1) : QuranScreen
     object Search : QuranScreen
@@ -68,6 +72,7 @@ sealed interface QuranScreen {
     object FridaySermon : QuranScreen
     object CustomAdhans : QuranScreen
     object HijriCalendar : QuranScreen
+    object IslamicHeritage : QuranScreen
 }
 
 class MainActivity : ComponentActivity() {
@@ -133,10 +138,26 @@ class MainActivity : ComponentActivity() {
                             screenStack = screenStack.dropLast(1)
                         }
 
+                        val onboardingPrefs = remember { getSharedPreferences("onboarding_prefs", Context.MODE_PRIVATE) }
+
                         when (val screen = currentScreen) {
                             is QuranScreen.Splash -> {
                                 SplashScreen(
                                     onSplashFinished = {
+                                        val hasSeen = onboardingPrefs.getBoolean("has_seen_onboarding", false)
+                                        if (!hasSeen) {
+                                            screenStack = listOf(QuranScreen.Onboarding)
+                                        } else {
+                                            screenStack = listOf(QuranScreen.Home)
+                                        }
+                                    }
+                                )
+                            }
+                            is QuranScreen.Onboarding -> {
+                                OnboardingScreen(
+                                    viewModel = viewModel,
+                                    onFinish = {
+                                        onboardingPrefs.edit().putBoolean("has_seen_onboarding", true).apply()
                                         screenStack = listOf(QuranScreen.Home)
                                     }
                                 )
@@ -192,6 +213,9 @@ class MainActivity : ComponentActivity() {
                                     },
                                     onNavigateToHijriCalendar = {
                                         screenStack = screenStack + QuranScreen.HijriCalendar
+                                    },
+                                    onNavigateToIslamicHeritage = {
+                                        screenStack = screenStack + QuranScreen.IslamicHeritage
                                     },
                                     onOpenDonationSheet = {
                                         showDonationSheet = true
@@ -358,6 +382,13 @@ class MainActivity : ComponentActivity() {
                                     }
                                 )
                             }
+                            is QuranScreen.IslamicHeritage -> {
+                                IslamicHeritageScreen(
+                                    onNavigateBack = {
+                                        if (screenStack.size > 1) screenStack = screenStack.dropLast(1)
+                                    }
+                                )
+                            }
                         }
 
                         if (showSettingsSheet) {
@@ -372,7 +403,11 @@ class MainActivity : ComponentActivity() {
                         if (showAboutSheet) {
                             AboutAppBottomSheet(
                                 sheetState = aboutSheetState,
-                                onDismissRequest = { showAboutSheet = false }
+                                onDismissRequest = { showAboutSheet = false },
+                                onOpenOnboarding = {
+                                    showAboutSheet = false
+                                    screenStack = listOf(QuranScreen.Onboarding)
+                                }
                             )
                         }
 
